@@ -3,7 +3,7 @@
 # Version: 6.3.0
 # Date: 2026-04-21T18:22:04.826Z
 
-project_name: bmad-installation
+project_name: git-visualizer
 user_skill_level: intermediate
 planning_artifacts: "{project-root}/_bmad-output/planning-artifacts"
 implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"
