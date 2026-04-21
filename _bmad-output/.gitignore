@@ -1,3 +1,5 @@
+# Ignore generated BMAD output; preserve this file and .gitkeep placeholders.
 *
 !.gitignore
+!*/
 !**/.gitkeep
