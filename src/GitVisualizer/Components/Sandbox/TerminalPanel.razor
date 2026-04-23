@@ -1,3 +1,179 @@
+@* src/GitVisualizer/Components/Sandbox/TerminalPanel.razor *@
+@inject IGitSimulatorService GitService
+@implements IDisposable
+
 <div class="terminal-panel">
-    <!-- Stub: full terminal implementation in Story 2.2 -->
+
+    <div class="terminal-toolbar">
+        <span class="terminal-title">Terminal</span>
+        <MudIconButton Icon="@Icons.Material.Filled.Clear"
+                       aria-label="Clear terminal output"
+                       Size="Size.Small"
+                       OnClick="HandleClearAsync" />
+        <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                       aria-label="Reset sandbox"
+                       Size="Size.Small"
+                       OnClick="ShowResetDialog" />
+    </div>
+
+    <MudProgressLinear Class="@ProgressBarClass" Indeterminate="true" />
+
+    <div class="terminal-output" aria-live="polite">
+        @foreach (var entry in GitService.CommandHistory)
+        {
+            <div class="terminal-entry">
+                <div class="terminal-command">
+                    <span class="terminal-prompt">$</span> @entry.Command
+                </div>
+                @if (entry.Result.Success)
+                {
+                    <pre class="terminal-output-text">@entry.Result.Output</pre>
+                }
+                else
+                {
+                    <MudAlert Class="terminal-alert" Severity="Severity.Warning" Dense="true">
+                        @entry.Result.ErrorMessage
+                        @if (!string.IsNullOrEmpty(entry.Result.SuggestedFix))
+                        {
+                            <span> @entry.Result.SuggestedFix</span>
+                        }
+                    </MudAlert>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="terminal-input-row">
+        <span class="terminal-prompt">$</span>
+        <textarea @ref="_inputRef"
+                  class="terminal-input"
+                  aria-label="Git command input"
+                  rows="1"
+                  value="@_inputText"
+                  @oninput="HandleInputChange"
+                  @onkeydown="HandleKeyDownAsync"
+                  placeholder="Enter git command..."></textarea>
+    </div>
+
+    @if (_showResetDialog)
+    {
+        <ResetConfirmDialog OnConfirm="HandleResetConfirmedAsync"
+                            OnCancel="HandleResetCancelled" />
+    }
+
 </div>
+
+@code {
+    private ElementReference _inputRef;
+    private string _inputText = string.Empty;
+    private string _savedInput = string.Empty;
+    private int _historyIndex = -1;
+    private bool _showResetDialog;
+
+    private string ProgressBarClass =>
+        GitService.IsProcessing
+            ? "terminal-progress"
+            : "terminal-progress terminal-progress--hidden";
+
+    protected override void OnInitialized()
+        => GitService.StateChanged += OnServiceStateChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try { await _inputRef.FocusAsync(); }
+            catch (JSException) { }
+        }
+    }
+
+    private void OnServiceStateChanged()
+        => InvokeAsync(StateHasChanged);
+
+    private void HandleInputChange(ChangeEventArgs e)
+        => _inputText = e.Value?.ToString() ?? string.Empty;
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter" when !e.ShiftKey:
+                await HandleSubmitAsync();
+                break;
+            case "ArrowUp":
+                NavigateHistoryUp();
+                break;
+            case "ArrowDown":
+                NavigateHistoryDown();
+                break;
+        }
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        var command = _inputText.Trim();
+        if (string.IsNullOrEmpty(command)) return;
+
+        _inputText = string.Empty;
+        _historyIndex = -1;
+        _savedInput = string.Empty;
+
+        if (command.Equals("clear", StringComparison.OrdinalIgnoreCase))
+        {
+            await GitService.ClearAsync();
+            return;
+        }
+
+        await GitService.ExecuteCommandAsync(command);
+        try { await _inputRef.FocusAsync(); }
+        catch (JSException) { }
+    }
+
+    private void NavigateHistoryUp()
+    {
+        var history = GitService.CommandHistory;
+        if (history.Count == 0) return;
+
+        if (_historyIndex == -1)
+            _savedInput = _inputText;
+
+        var newIndex = _historyIndex + 1;
+        if (newIndex >= history.Count) return;
+
+        _historyIndex = newIndex;
+        _inputText = history[history.Count - 1 - _historyIndex].Command;
+    }
+
+    private void NavigateHistoryDown()
+    {
+        if (_historyIndex <= 0)
+        {
+            _historyIndex = -1;
+            _inputText = _savedInput;
+            return;
+        }
+
+        _historyIndex--;
+        var history = GitService.CommandHistory;
+        _inputText = history[history.Count - 1 - _historyIndex].Command;
+    }
+
+    private async Task HandleClearAsync()
+        => await GitService.ClearAsync();
+
+    private void ShowResetDialog()
+        => _showResetDialog = true;
+
+    private async Task HandleResetConfirmedAsync()
+    {
+        await GitService.ResetAsync();
+        _showResetDialog = false;
+    }
+
+    private void HandleResetCancelled()
+        => _showResetDialog = false;
+
+    public void Dispose()
+        => GitService.StateChanged -= OnServiceStateChanged;
+}
+

@@ -1,0 +1,22 @@
+@* src/GitVisualizer/Components/Common/ResetConfirmDialog.razor *@
+<div class="reset-confirm-backdrop">
+    <div class="reset-confirm-dialog">
+        <p>Reset the sandbox? This will clear all git history and cannot be undone.</p>
+        <MudButton aria-label="Confirm reset"
+                   Color="Color.Error"
+                   Variant="Variant.Filled"
+                   OnClick="OnConfirm">
+            Reset
+        </MudButton>
+        <MudButton aria-label="Cancel reset"
+                   Variant="Variant.Text"
+                   OnClick="OnCancel">
+            Cancel
+        </MudButton>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EventCallback OnConfirm { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnCancel  { get; set; }
+}
