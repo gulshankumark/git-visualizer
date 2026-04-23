@@ -11,6 +11,7 @@ public sealed class ThemeService : IThemeService, IAsyncDisposable
     private readonly ILocalStorageService _localStorage;
     private readonly IJSRuntime _js;
     private IJSObjectReference? _module;
+    private bool _initialized;
 
     public bool IsDarkMode { get; private set; } = true;
     public MudTheme Theme => IsDarkMode ? AppTheme.Dark : AppTheme.Light;
@@ -25,6 +26,8 @@ public sealed class ThemeService : IThemeService, IAsyncDisposable
 
     public async Task InitializeAsync()
     {
+        if (_initialized) return;
+        _initialized = true;
         var stored = _localStorage.GetItem<string>(StorageKey);
         IsDarkMode = stored != "light";
         await SetDocumentThemeAsync();
@@ -46,9 +49,9 @@ public sealed class ThemeService : IThemeService, IAsyncDisposable
             var module = await GetModuleAsync();
             await module.InvokeVoidAsync("setDocumentTheme", IsDarkMode ? "dark" : "light");
         }
-        catch (JSException)
+        catch (Exception ex) when (ex is JSException or TaskCanceledException)
         {
-            // Silently swallow JS exceptions during WASM cold start
+            // Silently swallow JS exceptions and cancellations during WASM cold start
         }
     }
 

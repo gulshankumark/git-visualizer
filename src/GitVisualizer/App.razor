@@ -21,8 +21,8 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
-        await ThemeService.InitializeAsync();
         ThemeService.ThemeChanged += OnThemeChanged;
+        await ThemeService.InitializeAsync();
     }
 
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);

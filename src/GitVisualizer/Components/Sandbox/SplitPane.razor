@@ -28,7 +28,7 @@
     private const double DefaultSplit  = 0.40; // 40%
 
     private ElementReference _containerRef;
-    private double _terminalWidthPx;
+    private double _terminalWidthPx = MinTerminalPx;
     private double _containerWidth;
     private bool   _isDragging;
     private double _dragStartX;
@@ -38,7 +38,22 @@
     {
         if (!firstRender) return;
 
-        _containerWidth = await SplitPaneJs.GetContainerWidthAsync(_containerRef);
+        try
+        {
+            _containerWidth = await SplitPaneJs.GetContainerWidthAsync(_containerRef);
+        }
+        catch (JSException)
+        {
+            // Element not yet in DOM; default width already applied via field initializer
+            StateHasChanged();
+            return;
+        }
+
+        if (_containerWidth < MinTerminalPx + MinGraphPx)
+        {
+            StateHasChanged();
+            return;
+        }
 
         var saved = LocalStorage.GetItem<double>(StorageKey);
         _terminalWidthPx = saved > 0
@@ -50,7 +65,15 @@
 
     private async Task HandleDragStart(MouseEventArgs e)
     {
-        _containerWidth = await SplitPaneJs.GetContainerWidthAsync(_containerRef);
+        try
+        {
+            _containerWidth = await SplitPaneJs.GetContainerWidthAsync(_containerRef);
+        }
+        catch (JSException)
+        {
+            return;
+        }
+        if (_containerWidth < MinTerminalPx + MinGraphPx) return;
         _dragStartX     = e.ClientX;
         _dragStartWidth = _terminalWidthPx;
         _isDragging     = true;
@@ -59,6 +82,7 @@
     private void HandleDragMove(MouseEventArgs e)
     {
         if (!_isDragging) return;
+        if (_containerWidth < MinTerminalPx + MinGraphPx) return;
         var newWidth     = _dragStartWidth + (e.ClientX - _dragStartX);
         _terminalWidthPx = Math.Clamp(newWidth, MinTerminalPx, _containerWidth - MinGraphPx);
     }

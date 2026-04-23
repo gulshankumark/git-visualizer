@@ -23,11 +23,8 @@ public sealed class SplitPaneJsInterop : IAsyncDisposable, IDisposable
 
     public void Dispose()
     {
-        if (_module is not null)
-        {
-            _module.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            _module = null;
-        }
+        // IAsyncDisposable only — sync Dispose() is a no-op to avoid WASM deadlock
+        // (single-threaded runtime cannot block on async disposal)
     }
 
     public async ValueTask DisposeAsync()

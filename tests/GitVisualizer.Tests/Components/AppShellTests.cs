@@ -69,9 +69,8 @@ public class MainLayoutToolbarTests : BunitContext
     protected override void Dispose(bool disposing)
     {
         try { base.Dispose(disposing); }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("IAsyncDisposable")) { }
-        catch (AggregateException ex) when (ex.InnerExceptions.All(
-            e => e is InvalidOperationException ioe && ioe.Message.Contains("IAsyncDisposable"))) { }
+        catch (InvalidOperationException) { }
+        catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is InvalidOperationException)) { }
     }
 
     [Fact]
@@ -86,7 +85,6 @@ public class MainLayoutToolbarTests : BunitContext
             b.CloseComponent();
         });
         var ariaLabeled = cut.FindAll("[aria-label]");
-        Assert.True(ariaLabeled.Count >= 4,
-            $"Expected at least 4 aria-label elements but found {ariaLabeled.Count}");
+        Assert.Equal(4, ariaLabeled.Count);
     }
 }

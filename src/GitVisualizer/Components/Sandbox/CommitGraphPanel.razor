@@ -1,7 +1,3 @@
-@code {
-    [Parameter] public bool HasCommands { get; set; } = false;
-}
-
 <div class="commit-graph-panel"
      role="img"
      aria-label="@(HasCommands ? "Git repository commit graph" : "Git repository graph — no commits yet")">
@@ -18,3 +14,7 @@
         <div id="mermaid-graph"></div>
     }
 </div>
+
+@code {
+    [Parameter] public bool HasCommands { get; set; } = false;
+}
