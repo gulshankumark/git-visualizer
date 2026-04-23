@@ -1,6 +1,6 @@
 {
-  "name": "GitVisualizer",
-  "short_name": "GitVisualizer",
+  "name": "git-visualizer",
+  "short_name": "git-visualizer",
   "id": "./",
   "start_url": "./",
   "display": "standalone",
