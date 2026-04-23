@@ -19,4 +19,10 @@
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Exclude npm node_modules from publish — packages are for future JS bundling (Story 2.3+) -->
+    <Content Remove="wwwroot\node_modules\**" />
+    <None Remove="wwwroot\node_modules\**" />
+  </ItemGroup>
+
 </Project>
