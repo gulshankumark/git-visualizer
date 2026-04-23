@@ -1,0 +1,73 @@
+<div class="split-pane" @ref="_containerRef">
+    <div style="width:@(_terminalWidthPx)px; min-width:320px; flex-shrink:0; overflow:hidden;">
+        @LeftContent
+    </div>
+    <div class="split-handle" @onmousedown="HandleDragStart"></div>
+    <div style="flex:1; min-width:400px; overflow:hidden;">
+        @RightContent
+    </div>
+    @if (_isDragging)
+    {
+        <div style="position:fixed; inset:0; cursor:col-resize; z-index:9999; user-select:none;"
+             @onmousemove="HandleDragMove"
+             @onmouseup="HandleDragEnd"
+             @onmouseleave="HandleDragEnd" />
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? LeftContent  { get; set; }
+    [Parameter] public RenderFragment? RightContent { get; set; }
+
+    [Inject] private SplitPaneJsInterop SplitPaneJs   { get; set; } = default!;
+    [Inject] private ILocalStorageService LocalStorage { get; set; } = default!;
+
+    private const string StorageKey    = "gitvis.prefs.splitPosition";
+    private const double MinTerminalPx = 320.0;
+    private const double MinGraphPx    = 400.0;
+    private const double DefaultSplit  = 0.40; // 40%
+
+    private ElementReference _containerRef;
+    private double _terminalWidthPx;
+    private double _containerWidth;
+    private bool   _isDragging;
+    private double _dragStartX;
+    private double _dragStartWidth;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _containerWidth = await SplitPaneJs.GetContainerWidthAsync(_containerRef);
+
+        var saved = LocalStorage.GetItem<double>(StorageKey);
+        _terminalWidthPx = saved > 0
+            ? Math.Clamp(saved, MinTerminalPx, _containerWidth - MinGraphPx)
+            : _containerWidth * DefaultSplit;
+
+        StateHasChanged();
+    }
+
+    private async Task HandleDragStart(MouseEventArgs e)
+    {
+        _containerWidth = await SplitPaneJs.GetContainerWidthAsync(_containerRef);
+        _dragStartX     = e.ClientX;
+        _dragStartWidth = _terminalWidthPx;
+        _isDragging     = true;
+    }
+
+    private void HandleDragMove(MouseEventArgs e)
+    {
+        if (!_isDragging) return;
+        var newWidth     = _dragStartWidth + (e.ClientX - _dragStartX);
+        _terminalWidthPx = Math.Clamp(newWidth, MinTerminalPx, _containerWidth - MinGraphPx);
+    }
+
+    private Task HandleDragEnd(MouseEventArgs e)
+    {
+        if (!_isDragging) return Task.CompletedTask;
+        _isDragging = false;
+        LocalStorage.SetItem(StorageKey, _terminalWidthPx);
+        return Task.CompletedTask;
+    }
+}

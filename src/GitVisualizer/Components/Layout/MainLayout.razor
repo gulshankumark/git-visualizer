@@ -1,0 +1,46 @@
+@inherits LayoutComponentBase
+@inject IThemeService ThemeService
+@implements IDisposable
+
+<MudLayout Style="height:100vh; overflow:hidden;">
+    <MudAppBar Elevation="0" Fixed="true" Dense="true" Style="height:48px;">
+        <MudText Typo="Typo.h6" Style="margin-right: auto; font-family: var(--gitvis-font-mono);">
+            git-visualizer
+        </MudText>
+        <MudTooltip Text="Reset sandbox (Ctrl+Shift+R)">
+            <MudIconButton Icon="@Icons.Material.Outlined.RestartAlt"
+                           Disabled="true"
+                           aria-label="Reset sandbox" />
+        </MudTooltip>
+        <MudTooltip Text="Replay mode (Ctrl+Shift+P)">
+            <MudIconButton Icon="@Icons.Material.Outlined.PlayCircleOutline"
+                           Disabled="true"
+                           aria-label="Replay mode" />
+        </MudTooltip>
+        <MudTooltip Text="@(ThemeService.IsDarkMode ? "Switch to light theme" : "Switch to dark theme")">
+            <MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
+                           OnClick="@ThemeService.ToggleAsync"
+                           aria-label="@(ThemeService.IsDarkMode ? "Switch to light theme" : "Switch to dark theme")" />
+        </MudTooltip>
+        <MudTooltip Text="View source on GitHub">
+            <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
+                           Href="https://github.com/gulshankumark/git-visualizer"
+                           Target="_blank"
+                           aria-label="View source on GitHub" />
+        </MudTooltip>
+    </MudAppBar>
+    <MudMainContent Style="height:calc(100vh - 48px); overflow:hidden;">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.ThemeChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => ThemeService.ThemeChanged -= OnThemeChanged;
+}

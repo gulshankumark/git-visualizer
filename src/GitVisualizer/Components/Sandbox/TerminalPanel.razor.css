@@ -1,0 +1,5 @@
+.terminal-panel {
+    height:     100%;
+    background: var(--mud-palette-surface);
+    overflow:   hidden;
+}

@@ -1,0 +1,20 @@
+@code {
+    [Parameter] public bool HasCommands { get; set; } = false;
+}
+
+<div class="commit-graph-panel"
+     role="img"
+     aria-label="@(HasCommands ? "Git repository commit graph" : "Git repository graph — no commits yet")">
+    @if (!HasCommands)
+    {
+        <div class="empty-state">
+            <div class="empty-state-border">
+                <MudText>Your repository will appear here</MudText>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div id="mermaid-graph"></div>
+    }
+</div>

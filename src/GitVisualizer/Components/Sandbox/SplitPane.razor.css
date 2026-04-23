@@ -1,0 +1,19 @@
+.split-pane {
+    display:        flex;
+    flex-direction: row;
+    height:         100%;
+    overflow:       hidden;
+    user-select:    none; /* prevents text selection during drag */
+}
+
+.split-handle {
+    width:       var(--gitvis-split-handle-width, 8px);
+    flex-shrink: 0;
+    cursor:      col-resize;
+    background:  transparent;
+    transition:  background 0.15s ease;
+}
+
+.split-handle:hover {
+    background: var(--mud-palette-divider);
+}

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
 using GitVisualizer;
+using GitVisualizer.Services;
+using GitVisualizer.Interop;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -13,6 +15,9 @@ builder.Services.AddMudServices();
 
 // Blazor.LocalStorage.WebAssembly 9.0.1 — DI extension method: AddLocalStorageServices()
 builder.Services.AddLocalStorageServices();
+
+builder.Services.AddSingleton<IThemeService, ThemeService>();
+builder.Services.AddSingleton<SplitPaneJsInterop>();
 
 // Future singletons — added in Stories 2.3–2.5:
 // builder.Services.AddSingleton<IGitSimulatorService, GitSimulatorService>();

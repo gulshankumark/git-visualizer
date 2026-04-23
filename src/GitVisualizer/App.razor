@@ -1,4 +1,7 @@
-<MudThemeProvider Theme="_theme" IsDarkMode="_isDarkMode" />
+@inject IThemeService ThemeService
+@implements IDisposable
+
+<MudThemeProvider Theme="@ThemeService.Theme" IsDarkMode="@ThemeService.IsDarkMode" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -16,23 +19,13 @@
 </Router>
 
 @code {
-    private bool _isDarkMode = false;
-
-    private readonly MudTheme _theme = new MudTheme
+    protected override async Task OnInitializedAsync()
     {
-        PaletteLight = new PaletteLight
-        {
-            Primary = "#0969da",           // GitHub blue
-            Secondary = "#1a7f37",         // GitHub green
-            AppbarBackground = "#24292f",  // GitHub dark header
-        },
-        PaletteDark = new PaletteDark
-        {
-            Primary = "#58a6ff",           // GitHub blue (dark)
-            Secondary = "#3fb950",         // GitHub green (dark)
-            AppbarBackground = "#161b22",
-            Background = "#0d1117",
-            Surface = "#161b22",
-        }
-    };
+        await ThemeService.InitializeAsync();
+        ThemeService.ThemeChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => ThemeService.ThemeChanged -= OnThemeChanged;
 }
