@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GitVisualizer/GitVisualizer.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GitVisualizer.Tests/GitVisualizer.Tests.csproj" />
+  </Folder>
+</Solution>

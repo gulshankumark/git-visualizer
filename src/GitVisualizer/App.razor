@@ -1,0 +1,40 @@
+@using MudBlazor
+
+<MudThemeProvider Theme="_theme" IsDarkMode="_isDarkMode" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    private bool _isDarkMode = false;
+
+    private readonly MudTheme _theme = new MudTheme
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#0969da",           // GitHub blue
+            Secondary = "#1a7f37",         // GitHub green
+            AppbarBackground = "#24292f",  // GitHub dark header
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#58a6ff",           // GitHub blue (dark)
+            Secondary = "#3fb950",         // GitHub green (dark)
+            AppbarBackground = "#161b22",
+            Background = "#0d1117",
+            Surface = "#161b22",
+        }
+    };
+}
