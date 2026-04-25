@@ -13,6 +13,7 @@
         <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
                        aria-label="Reset sandbox"
                        Size="Size.Small"
+                       Disabled="@GitService.IsProcessing"
                        OnClick="ShowResetDialog" />
     </div>
 
@@ -97,6 +98,9 @@
     {
         switch (e.Key)
         {
+            case "Enter" when e.ShiftKey:
+                _inputText += "\n";
+                break;
             case "Enter" when !e.ShiftKey:
                 await HandleSubmitAsync();
                 break;
@@ -111,20 +115,31 @@
 
     private async Task HandleSubmitAsync()
     {
+        if (GitService.IsProcessing) return;
+
         var command = _inputText.Trim();
         if (string.IsNullOrEmpty(command)) return;
 
-        _inputText = string.Empty;
         _historyIndex = -1;
         _savedInput = string.Empty;
 
         if (command.Equals("clear", StringComparison.OrdinalIgnoreCase))
         {
+            _inputText = string.Empty;
             await GitService.ClearAsync();
             return;
         }
 
-        await GitService.ExecuteCommandAsync(command);
+        _inputText = string.Empty;
+        try
+        {
+            await GitService.ExecuteCommandAsync(command);
+        }
+        catch
+        {
+            _inputText = command; // restore on failure so the user can retry
+            throw;
+        }
         try { await _inputRef.FocusAsync(); }
         catch (JSException) { }
     }
@@ -159,13 +174,19 @@
     }
 
     private async Task HandleClearAsync()
-        => await GitService.ClearAsync();
+    {
+        _historyIndex = -1;
+        _savedInput = string.Empty;
+        await GitService.ClearAsync();
+    }
 
     private void ShowResetDialog()
         => _showResetDialog = true;
 
     private async Task HandleResetConfirmedAsync()
     {
+        _historyIndex = -1;
+        _savedInput = string.Empty;
         await GitService.ResetAsync();
         _showResetDialog = false;
     }

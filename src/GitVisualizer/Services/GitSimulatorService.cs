@@ -21,14 +21,19 @@ public sealed class GitSimulatorService : IGitSimulatorService
         _isProcessing = true;
         StateChanged?.Invoke();
 
-        await Task.Delay(300);
+        try
+        {
+            await Task.Delay(300);
 
-        var result = RunCommand(rawCommand.Trim());
-        _history.Add(new CommandHistoryEntry(rawCommand, result, DateTime.UtcNow));
-
-        _isProcessing = false;
-        StateChanged?.Invoke();
-        return result;
+            var result = RunCommand(rawCommand.Trim());
+            _history.Add(new CommandHistoryEntry(rawCommand, result, DateTime.UtcNow));
+            return result;
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateChanged?.Invoke();
+        }
     }
 
     private static CommandResult RunCommand(string command) => command switch

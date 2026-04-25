@@ -120,6 +120,31 @@ public class TerminalPanelTests : BunitContext
         Assert.Empty(_git.ExecutedCommands);
     }
 
+    [Fact]
+    public void TerminalPanel_ShiftEnter_InsertsNewlineIntoInput()
+    {
+        var cut = Render<TerminalPanel>();
+        var textarea = cut.Find("textarea");
+        textarea.TriggerEvent("oninput", new ChangeEventArgs { Value = "line one" });
+        textarea.TriggerEvent("onkeydown", new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+
+        Assert.Contains("\n", cut.Find("textarea").GetAttribute("value") ?? cut.Find("textarea").OuterHtml);
+    }
+
+    // ── AC1: Focus regain after command execution ─────────────────────────────
+
+    [Fact]
+    public void TerminalPanel_AfterCommandExecution_InputIsCleared()
+    {
+        var cut = Render<TerminalPanel>();
+        var textarea = cut.Find("textarea");
+        textarea.TriggerEvent("oninput", new ChangeEventArgs { Value = "git status" });
+        textarea.TriggerEvent("onkeydown", new KeyboardEventArgs { Key = "Enter" });
+
+        // Input must be cleared after submission (focus regain is a JS side-effect verified separately)
+        Assert.DoesNotContain("git status", cut.Find("textarea").GetAttribute("value") ?? "");
+    }
+
     // ── AC5: clear command & Clear button ────────────────────────────────────
 
     [Fact]
