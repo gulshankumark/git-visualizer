@@ -41,6 +41,28 @@ internal sealed class FakeGitSimulatorService : IGitSimulatorService
         return Task.CompletedTask;
     }
 
+    public Task<CommandResult> InitRepoAsync() =>
+        Task.FromResult(new CommandResult(true, "Initialized.", null, null,
+            new RepoState(true, "main", [], [])));
+
+    public Task<CommandResult> AddAsync(string filepath = ".") =>
+        Task.FromResult(new CommandResult(true, "Staged.", null, null, null));
+
+    public Task<CommandResult> CommitAsync(string message) =>
+        Task.FromResult(new CommandResult(true, $"Committed: {message}", null, null, null));
+
+    public Task<CommandResult> CreateBranchAsync(string name) =>
+        Task.FromResult(new CommandResult(true, $"Branch '{name}' created.", null, null, null));
+
+    public Task<CommandResult> CheckoutAsync(string @ref, bool createBranch = false) =>
+        Task.FromResult(new CommandResult(true, $"Switched to '{@ref}'.", null, null, null));
+
+    public Task<CommandResult> MergeAsync(string branch) =>
+        Task.FromResult(new CommandResult(true, $"Merged '{branch}'.", null, null, null));
+
+    public Task<CommandResult> GetLogAsync(int depth = 20) =>
+        Task.FromResult(new CommandResult(true, "(no commits)", null, null, null));
+
     public void AddHistoryEntry(string command, CommandResult result)
         => _history.Add(new CommandHistoryEntry(command, result, DateTime.UtcNow));
 }

@@ -1,11 +1,12 @@
 // src/GitVisualizer/Interop/GitJsInterop.cs
 using Microsoft.JSInterop;
+using System.Text.Json;
 
 namespace GitVisualizer.Interop;
 
 /// <summary>
-/// JS interop wrapper for git-interop.js.
-/// Full git operations are wired in Story 2.3; this provides the interop scaffold.
+/// JS interop wrapper for git-interop.js. The only C# file that calls git-interop.js functions.
+/// Module handle is imported once and cached; disposed via IAsyncDisposable.
 /// </summary>
 public sealed class GitJsInterop : IAsyncDisposable, IDisposable
 {
@@ -17,6 +18,27 @@ public sealed class GitJsInterop : IAsyncDisposable, IDisposable
     private async ValueTask<IJSObjectReference> GetModuleAsync()
         => _module ??= await _js.InvokeAsync<IJSObjectReference>(
                "import", "./js/git-interop.js");
+
+    public async ValueTask<JsonElement> GitInitAsync()
+        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitInit");
+
+    public async ValueTask<JsonElement> GitAddAsync(string filepath = ".")
+        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitAdd", filepath);
+
+    public async ValueTask<JsonElement> GitCommitAsync(string message)
+        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitCommit", message);
+
+    public async ValueTask<JsonElement> GitBranchAsync(string name)
+        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitBranch", name);
+
+    public async ValueTask<JsonElement> GitCheckoutAsync(string @ref, bool createBranch = false)
+        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitCheckout", @ref, createBranch);
+
+    public async ValueTask<JsonElement> GitMergeAsync(string branch)
+        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitMerge", branch);
+
+    public async ValueTask<JsonElement> GitLogAsync(int depth = 20)
+        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitLog", depth);
 
     public void Dispose()
     {

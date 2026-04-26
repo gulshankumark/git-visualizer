@@ -1,16 +1,18 @@
 // src/GitVisualizer/Services/GitSimulatorService.cs
+using GitVisualizer.Interop;
 using GitVisualizer.Models;
+using Microsoft.JSInterop;
 
 namespace GitVisualizer.Services;
 
-/// <summary>
-/// Stub implementation of IGitSimulatorService.
-/// Handles a small set of git commands locally; full JS-backed implementation in Story 2.3.
-/// </summary>
 public sealed class GitSimulatorService : IGitSimulatorService
 {
+    private readonly GitJsInterop _gitJs;
     private readonly List<CommandHistoryEntry> _history = new();
+    private RepoState? _currentState;
     private bool _isProcessing;
+
+    public GitSimulatorService(GitJsInterop gitJs) => _gitJs = gitJs;
 
     public bool IsProcessing => _isProcessing;
     public IReadOnlyList<CommandHistoryEntry> CommandHistory => _history;
@@ -18,30 +20,158 @@ public sealed class GitSimulatorService : IGitSimulatorService
 
     public async Task<CommandResult> ExecuteCommandAsync(string rawCommand)
     {
+        if (_isProcessing)
+            return new CommandResult(false, "", "A command is already running.", null, null);
+
         _isProcessing = true;
         StateChanged?.Invoke();
 
+        CommandResult result;
         try
         {
-            await Task.Delay(300);
-
-            var result = RunCommand(rawCommand.Trim());
+            result = await DispatchCommandAsync(rawCommand.Trim());
             _history.Add(new CommandHistoryEntry(rawCommand, result, DateTime.UtcNow));
-            return result;
         }
         finally
         {
             _isProcessing = false;
             StateChanged?.Invoke();
         }
+        return result;
     }
 
-    private static CommandResult RunCommand(string command) => command switch
+    private Task<CommandResult> DispatchCommandAsync(string command)
     {
-        "git init"   => new CommandResult(true,  "Initialized empty Git repository in .git/", null, null, null),
-        "git status" => new CommandResult(true,  "On branch main\nNothing to commit, working tree clean", null, null, null),
-        _            => new CommandResult(false, "", $"'{command}' is not yet supported. Full git support arrives in Story 2.3.", null, null)
-    };
+        // Inline routing — Story 2.4 replaces this with CommandParserService
+        var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return Task.FromResult(new CommandResult(false, "", "Empty command.", null, null));
+
+        return (parts[0].ToLowerInvariant(), parts.Length > 1 ? parts[1].ToLowerInvariant() : "") switch
+        {
+            ("git", "init")     => InitRepoAsync(),
+            ("git", "add")      => AddAsync(parts.Length > 2 ? parts[2] : "."),
+            ("git", "commit")   => CommitAsync(ExtractCommitMessage(parts)),
+            ("git", "branch")   => parts.Length > 2 ? CreateBranchAsync(parts[2]) : GetLogAsync(),
+            ("git", "checkout") => parts.Length > 3 && parts[2] == "-b"
+                                    ? CheckoutAsync(parts[3], createBranch: true)
+                                    : CheckoutAsync(parts.Length > 2 ? parts[2] : "main"),
+            ("git", "merge")    => parts.Length > 2
+                                    ? MergeAsync(parts[2])
+                                    : Task.FromResult(new CommandResult(false, "", "'git merge' requires a branch name.", null, null)),
+            ("git", "log")      => GetLogAsync(),
+            ("git", "status")   => Task.FromResult(BuildStatusResult()),
+            ("git", "rebase")   => Task.FromResult(new CommandResult(false, "", "'git rebase' is coming in v1.0 — for now try 'git merge'.", "git merge", null)),
+            ("git", "help")     => Task.FromResult(new CommandResult(true, HelpText, null, null, _currentState)),
+            ("git", _)          => Task.FromResult(new CommandResult(false, "", $"'{command}' is not a supported git command. Type 'git help' for a list of available commands.", null, null)),
+            _                   => Task.FromResult(new CommandResult(false, "", $"Unknown command '{command}'. Git commands start with 'git'. Type 'git help' for available commands.", "git help", null))
+        };
+    }
+
+    public async Task<CommandResult> InitRepoAsync()
+    {
+        try
+        {
+            var json = await _gitJs.GitInitAsync();
+            var msg = json.GetProperty("message").GetString() ?? "Initialized.";
+            _currentState = new RepoState(true, "main", [], []);
+            return new CommandResult(true, msg, null, null, _currentState);
+        }
+        catch (JSException ex)
+        {
+            return new CommandResult(false, "", $"Git engine error: {ex.Message}", null, null);
+        }
+    }
+
+    public async Task<CommandResult> AddAsync(string filepath = ".")
+    {
+        try
+        {
+            var json = await _gitJs.GitAddAsync(filepath);
+            var msg = json.GetProperty("message").GetString() ?? "Changes staged.";
+            return new CommandResult(true, msg, null, null, _currentState);
+        }
+        catch (JSException ex)
+        {
+            return new CommandResult(false, "", $"Git engine error: {ex.Message}", null, null);
+        }
+    }
+
+    public async Task<CommandResult> CommitAsync(string message)
+    {
+        try
+        {
+            var json = await _gitJs.GitCommitAsync(message);
+            var msg = json.GetProperty("message").GetString() ?? "Committed.";
+            return new CommandResult(true, msg, null, null, _currentState);
+        }
+        catch (JSException ex)
+        {
+            var err = ex.Message.Contains("Nothing to commit", StringComparison.OrdinalIgnoreCase)
+                ? "Nothing to commit. Run 'git add .' first."
+                : $"Git engine error: {ex.Message}";
+            return new CommandResult(false, "", err, "git add .", null);
+        }
+    }
+
+    public async Task<CommandResult> CreateBranchAsync(string name)
+    {
+        try
+        {
+            var json = await _gitJs.GitBranchAsync(name);
+            var msg = json.GetProperty("message").GetString() ?? $"Created branch '{name}'.";
+            return new CommandResult(true, msg, null, null, _currentState);
+        }
+        catch (JSException ex)
+        {
+            return new CommandResult(false, "", $"Git engine error: {ex.Message}", null, null);
+        }
+    }
+
+    public async Task<CommandResult> CheckoutAsync(string @ref, bool createBranch = false)
+    {
+        try
+        {
+            var json = await _gitJs.GitCheckoutAsync(@ref, createBranch);
+            var msg = json.GetProperty("message").GetString() ?? $"Switched to branch '{@ref}'.";
+            _currentState = _currentState is not null
+                ? _currentState with { CurrentBranch = @ref }
+                : new RepoState(true, @ref, [], []);
+            return new CommandResult(true, msg, null, null, _currentState);
+        }
+        catch (JSException ex)
+        {
+            return new CommandResult(false, "", $"Git engine error: {ex.Message}", null, null);
+        }
+    }
+
+    public async Task<CommandResult> MergeAsync(string branch)
+    {
+        try
+        {
+            var json = await _gitJs.GitMergeAsync(branch);
+            var msg = json.GetProperty("message").GetString() ?? "Merge complete.";
+            return new CommandResult(true, msg, null, null, _currentState);
+        }
+        catch (JSException ex)
+        {
+            return new CommandResult(false, "", $"Git engine error: {ex.Message}", null, null);
+        }
+    }
+
+    public async Task<CommandResult> GetLogAsync(int depth = 20)
+    {
+        try
+        {
+            var json = await _gitJs.GitLogAsync(depth);
+            var msg = json.GetProperty("message").GetString() ?? "(no commits yet)";
+            return new CommandResult(true, msg, null, null, _currentState);
+        }
+        catch (JSException ex)
+        {
+            return new CommandResult(false, "", $"Git engine error: {ex.Message}", null, null);
+        }
+    }
 
     public Task ClearAsync()
     {
@@ -53,7 +183,50 @@ public sealed class GitSimulatorService : IGitSimulatorService
     public Task ResetAsync()
     {
         _history.Clear();
+        _currentState = null;
         StateChanged?.Invoke();
         return Task.CompletedTask;
     }
+
+    private CommandResult BuildStatusResult()
+    {
+        if (_currentState is null)
+            return new CommandResult(false, "", "Not a git repository. Run 'git init' first.", "git init", null);
+
+        var staged = _currentState.StagedFiles.Count > 0
+            ? $"Changes to be committed:\n{string.Join("\n", _currentState.StagedFiles.Select(f => $"  modified: {f}"))}\n"
+            : "";
+        var untracked = _currentState.UntrackedFiles.Count > 0
+            ? $"Untracked files:\n{string.Join("\n", _currentState.UntrackedFiles.Select(f => $"  {f}"))}\n"
+            : "";
+        var clean = staged.Length == 0 && untracked.Length == 0
+            ? "nothing to commit, working tree clean"
+            : "";
+
+        var output = $"On branch {_currentState.CurrentBranch ?? "main"}\n{staged}{untracked}{clean}".TrimEnd();
+        return new CommandResult(true, output, null, null, _currentState);
+    }
+
+    private static string ExtractCommitMessage(string[] parts)
+    {
+        var mIndex = Array.IndexOf(parts, "-m");
+        if (mIndex < 0 || mIndex + 1 >= parts.Length)
+            return "Update";
+        return string.Join(" ", parts[(mIndex + 1)..]).Trim('"', '\'');
+    }
+
+    private const string HelpText =
+        """
+        Available git commands:
+          git init              Initialize a new repository
+          git add <file>        Stage a file (use '.' to stage all)
+          git commit -m "msg"   Create a commit
+          git branch <name>     Create a new branch
+          git checkout <ref>    Switch to a branch
+          git checkout -b <ref> Create and switch to a branch
+          git merge <branch>    Merge a branch into current
+          git log               Show commit history
+          git status            Show working tree status
+          git help              Show this help text
+        """;
 }

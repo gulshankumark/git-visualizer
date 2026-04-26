@@ -7,12 +7,16 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx esbuild js/git-interop.src.js --bundle --format=esm --platform=browser --outfile=js/git-interop.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  },
   "dependencies": {
     "@isomorphic-git/lightning-fs": "^4.6.2",
     "isomorphic-git": "^1.37.5",

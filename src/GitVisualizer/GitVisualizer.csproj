@@ -25,4 +25,8 @@
     <None Remove="wwwroot/node_modules/**" />
   </ItemGroup>
 
+  <Target Name="BuildJavaScript" BeforeTargets="Build">
+    <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)\wwwroot" />
+  </Target>
+
 </Project>
