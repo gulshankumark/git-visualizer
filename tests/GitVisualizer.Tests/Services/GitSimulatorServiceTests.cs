@@ -2,6 +2,7 @@
 using Bunit;
 using GitVisualizer.Interop;
 using GitVisualizer.Services;
+using GitVisualizer.Tests.Fakes;
 using System.Text.Json;
 
 namespace GitVisualizer.Tests.Services;
@@ -24,7 +25,7 @@ public class GitSimulatorServiceTests : TestContext
             .Setup<JsonElement>("gitInit")
             .SetResult(JsonDocument.Parse("""{"success":true,"message":"Initialized empty Git repository in /"}""").RootElement);
 
-        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime));
+        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime), new FakeCommandParserService());
 
         var result = await sut.InitRepoAsync();
 
@@ -42,7 +43,7 @@ public class GitSimulatorServiceTests : TestContext
             .Setup<JsonElement>("gitInit")
             .SetResult(JsonDocument.Parse("""{"success":true,"message":"Initialized."}""").RootElement);
 
-        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime));
+        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime), new FakeCommandParserService());
 
         var result = await sut.ExecuteCommandAsync("git init");
 
@@ -53,7 +54,7 @@ public class GitSimulatorServiceTests : TestContext
     [Fact]
     public async Task ExecuteCommandAsync_UnknownCommand_ReturnsFriendlyErrorWithSuggestedFix()
     {
-        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime));
+        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime), new FakeCommandParserService());
 
         var result = await sut.ExecuteCommandAsync("npm install");
 
@@ -63,3 +64,4 @@ public class GitSimulatorServiceTests : TestContext
         Assert.Equal("git help", result.SuggestedFix);
     }
 }
+

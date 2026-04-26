@@ -23,7 +23,7 @@ builder.Services.AddSingleton<GitJsInterop>();
 builder.Services.AddSingleton<IGitSimulatorService, GitSimulatorService>();
 
 // Future singletons — added in Stories 2.3–2.5:
-// builder.Services.AddSingleton<ICommandParserService, CommandParserService>();
+builder.Services.AddSingleton<ICommandParserService, CommandParserService>();
 // builder.Services.AddSingleton<IGraphRenderService, GraphRenderService>();
 
 await builder.Build().RunAsync();

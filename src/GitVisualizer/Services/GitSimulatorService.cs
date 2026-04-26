@@ -8,11 +8,16 @@ namespace GitVisualizer.Services;
 public sealed class GitSimulatorService : IGitSimulatorService
 {
     private readonly GitJsInterop _gitJs;
+    private readonly ICommandParserService _commandParser;
     private readonly List<CommandHistoryEntry> _history = new();
     private RepoState? _currentState;
     private bool _isProcessing;
 
-    public GitSimulatorService(GitJsInterop gitJs) => _gitJs = gitJs;
+    public GitSimulatorService(GitJsInterop gitJs, ICommandParserService commandParser)
+    {
+        _gitJs = gitJs;
+        _commandParser = commandParser;
+    }
 
     public bool IsProcessing => _isProcessing;
     public IReadOnlyList<CommandHistoryEntry> CommandHistory => _history;
@@ -42,32 +47,50 @@ public sealed class GitSimulatorService : IGitSimulatorService
 
     private Task<CommandResult> DispatchCommandAsync(string command)
     {
-        // Inline routing — Story 2.4 replaces this with CommandParserService
         var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 0)
             return Task.FromResult(new CommandResult(false, "", "Empty command.", null, null));
 
-        return (parts[0].ToLowerInvariant(), parts.Length > 1 ? parts[1].ToLowerInvariant() : "") switch
+        // Guard: non-git input
+        if (parts[0].ToLowerInvariant() != "git")
+            return Task.FromResult(new CommandResult(false, "",
+                $"Unknown command '{command}'. Git commands start with 'git'. Type 'git help' for available commands.",
+                "git help", null));
+
+        var gitCommand = _commandParser.Parse(command);
+
+        return gitCommand.Name switch
         {
-            ("git", "init")     => InitRepoAsync(),
-            ("git", "add")      => AddAsync(parts.Length > 2 ? parts[2] : "."),
-            ("git", "commit")   => CommitAsync(ExtractCommitMessage(parts)),
-            ("git", "branch")   => parts.Length > 2
-                                    ? CreateBranchAsync(parts[2])
-                                    : Task.FromResult(new CommandResult(true, "Branch listing is not yet available. Use 'git log' to see commit history, or 'git branch <name>' to create a branch.", null, null, _currentState)),
-            ("git", "checkout") => parts.Length > 3 && parts[2] == "-b"
-                                    ? CheckoutAsync(parts[3], createBranch: true)
-                                    : CheckoutAsync(parts.Length > 2 ? parts[2] : "main"),
-            ("git", "merge")    => parts.Length > 2
-                                    ? MergeAsync(parts[2])
-                                    : Task.FromResult(new CommandResult(false, "", "'git merge' requires a branch name.", null, null)),
-            ("git", "log")      => GetLogAsync(),
-            ("git", "status")   => Task.FromResult(BuildStatusResult()),
-            ("git", "rebase")   => Task.FromResult(new CommandResult(false, "", "'git rebase' is coming in v1.0 — for now try 'git merge'.", "git merge", null)),
-            ("git", "help")     => Task.FromResult(new CommandResult(true, HelpText, null, null, _currentState)),
-            ("git", _)          => Task.FromResult(new CommandResult(false, "", $"'{command}' is not a supported git command. Type 'git help' for a list of available commands.", null, null)),
-            _                   => Task.FromResult(new CommandResult(false, "", $"Unknown command '{command}'. Git commands start with 'git'. Type 'git help' for available commands.", "git help", null))
+            "init"     => InitRepoAsync(),
+            "add"      => AddAsync(gitCommand.Args.GetValueOrDefault("arg0", ".")),
+            "commit"   => CommitAsync(gitCommand.Args.GetValueOrDefault("m", "Update")),
+            "branch"   => gitCommand.Args.TryGetValue("arg0", out var bn)
+                             ? CreateBranchAsync(bn)
+                             : Task.FromResult(new CommandResult(true,
+                                 "Branch listing is not yet available. Use 'git log' to see commit history, or 'git branch <name>' to create a branch.",
+                                 null, null, _currentState)),
+            "checkout" => gitCommand.Args.TryGetValue("b", out var nb)
+                             ? CheckoutAsync(nb, createBranch: true)
+                             : CheckoutAsync(gitCommand.Args.GetValueOrDefault("arg0", "main")),
+            "merge"    => gitCommand.Args.TryGetValue("arg0", out var mb)
+                             ? MergeAsync(mb)
+                             : Task.FromResult(new CommandResult(false, "", "'git merge' requires a branch name.", null, null)),
+            "log"      => GetLogAsync(),
+            "status"   => Task.FromResult(BuildStatusResult()),
+            "rebase"   => Task.FromResult(new CommandResult(false, "",
+                             "'git rebase' is coming in v1.0 — for now try 'git merge'.", "git merge", null)),
+            "help"     => Task.FromResult(new CommandResult(true, HelpText, null, null, _currentState)),
+            _          => DispatchUnknownCommandAsync(command)
         };
+    }
+
+    private Task<CommandResult> DispatchUnknownCommandAsync(string command)
+    {
+        var suggestion = _commandParser.Suggest(command);
+        var errMsg = suggestion is not null
+            ? $"'{command}' is not a valid git command. Did you mean '{suggestion}'? Type 'git help' for available commands."
+            : $"'{command}' is not a supported git command. Type 'git help' for available commands.";
+        return Task.FromResult(new CommandResult(false, "", errMsg, suggestion ?? "git help", null));
     }
 
     public async Task<CommandResult> InitRepoAsync()
@@ -207,14 +230,6 @@ public sealed class GitSimulatorService : IGitSimulatorService
 
         var output = $"On branch {_currentState.CurrentBranch ?? "main"}\n{staged}{untracked}{clean}".TrimEnd();
         return new CommandResult(true, output, null, null, _currentState);
-    }
-
-    private static string ExtractCommitMessage(string[] parts)
-    {
-        var mIndex = Array.IndexOf(parts, "-m");
-        if (mIndex < 0 || mIndex + 1 >= parts.Length)
-            return "Update";
-        return string.Join(" ", parts[(mIndex + 1)..]).Trim('"', '\'');
     }
 
     private const string HelpText =
