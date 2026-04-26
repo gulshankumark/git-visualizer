@@ -63,5 +63,18 @@ public class GitSimulatorServiceTests : TestContext
         Assert.Contains("git help", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("git help", result.SuggestedFix);
     }
+
+    [Fact]
+    public async Task ExecuteCommandAsync_TypoGitSubcommand_ReturnsSuggestion()
+    {
+        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime), new CommandParserService());
+
+        var result = await sut.ExecuteCommandAsync("git comit");
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("Did you mean", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("git commit", result.SuggestedFix);
+    }
 }
 
