@@ -33,4 +33,7 @@ builder.Services.AddSingleton<StorageJsInterop>();
 builder.Services.AddSingleton<IStorageJsInterop>(sp => sp.GetRequiredService<StorageJsInterop>());
 builder.Services.AddSingleton<IStorageMonitorService, StorageMonitorService>();
 
+// Story 4.1 — Service Worker Update Detection
+builder.Services.AddSingleton<IServiceWorkerUpdateService, ServiceWorkerUpdateService>();
+
 await builder.Build().RunAsync();

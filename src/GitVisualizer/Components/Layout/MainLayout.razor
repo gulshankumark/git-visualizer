@@ -1,7 +1,9 @@
 @inherits LayoutComponentBase
 @inject IThemeService ThemeService
 @inject IGitSimulatorService GitSimulator
-@implements IDisposable
+@inject IServiceWorkerUpdateService ServiceWorkerUpdateService
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
 
 <MudLayout Style="height:100vh; overflow:hidden;">
     <MudAppBar Elevation="0" Fixed="true" Dense="true" Style="height:48px;">
@@ -42,12 +44,35 @@
 @code {
     private bool _isResetDialogOpen;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         ThemeService.ThemeChanged += OnThemeChanged;
+        ServiceWorkerUpdateService.UpdateDetected += OnServiceWorkerUpdateDetected;
+
+        try
+        {
+            await ServiceWorkerUpdateService.InitializeAsync();
+            System.Diagnostics.Debug.WriteLine("[MainLayout] Service Worker update detection initialized");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainLayout] Error initializing service worker update detection: {ex.Message}");
+        }
     }
 
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnServiceWorkerUpdateDetected(object? sender, EventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine("[MainLayout] Service Worker update detected");
+        InvokeAsync(async () =>
+        {
+            // Show update notification - reload will happen after a delay
+            Snackbar.Add("A new version is available. Reloading in 3 seconds...", Severity.Info);
+            await Task.Delay(3000);
+            await ServiceWorkerUpdateService.ReloadWithNewVersionAsync();
+        });
+    }
 
     private async Task HandleResetConfirm()
     {
@@ -71,6 +96,11 @@
         return Task.CompletedTask;
     }
 
-    public void Dispose() => ThemeService.ThemeChanged -= OnThemeChanged;
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+        ServiceWorkerUpdateService.UpdateDetected -= OnServiceWorkerUpdateDetected;
+    }
 }
+
 
