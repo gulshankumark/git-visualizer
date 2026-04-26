@@ -33,6 +33,13 @@ internal sealed class FakeSessionStorageService : ISessionStorageService
         return Task.CompletedTask;
     }
 
+    public Task ClearAllAsync()
+    {
+        _savedState = null;
+        _savedPrefs = null;
+        return Task.CompletedTask;
+    }
+
     public ValueTask DisposeAsync()
     {
         return ValueTask.CompletedTask;

@@ -43,6 +43,21 @@ public sealed class GitJsInterop : IAsyncDisposable, IDisposable
     public async ValueTask<JsonElement> GitGetGraphAsync()
         => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitGetGraph");
 
+    /// <summary>Reset git repository state by wiping lightning-fs IndexedDB namespace.</summary>
+    public async ValueTask GitResetAsync()
+    {
+        try
+        {
+            await (await GetModuleAsync()).InvokeVoidAsync("gitReset");
+            System.Diagnostics.Debug.WriteLine("[GitJsInterop] Git reset completed (IndexedDB wiped)");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GitJsInterop] Error during git reset: {ex.Message}");
+            // Don't rethrow — allow reset to continue
+        }
+    }
+
     public void Dispose()
     {
         // IAsyncDisposable only — sync Dispose() is a no-op to avoid WASM deadlock

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx bmad-method *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(npx esbuild *)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s https://registry.npmjs.org/@gitgraph/js)",
+      "Bash(npm view *)",
+      "Bash(npm info *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:gitgraph.js.org)",
+      "Bash(npm pack *)",
+      "Bash(tar -tzf gitgraph-js-1.4.0.tgz)",
+      "Bash(grep \"\\\\.d\\\\.ts$\")",
+      "Bash(tar -xzf gitgraph-js-1.4.0.tgz)",
+      "Bash(tar -tzf gitgraph-core-1.5.0.tgz)",
+      "Bash(tar -xzf gitgraph-core-1.5.0.tgz)",
+      "Bash(tar -xzf gitgraph-js-1.4.0.tgz package/lib/gitgraph.umd.min.js)",
+      "Bash(gzip -9 package/lib/gitgraph.umd.min.js)",
+      "Bash(tar -xzf gitgraph-js-1.4.0.tgz package/package.json)",
+      "Bash(tar -xzf gitgraph-js-1.4.0.tgz package/lib/index.js)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

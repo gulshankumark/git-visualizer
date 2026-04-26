@@ -30,40 +30,54 @@
 
 @code {
     [Inject]
-    private IGitSimulatorService GitSimulator { get; set; } = null!;
+    private IGitSimulatorService? GitSimulator { get; set; }
 
     [Inject]
-    private ISnackbar Snackbar { get; set; } = null!;
+    private ISnackbar? Snackbar { get; set; }
 
     private TerminalPanel? _terminalPanel;
     private HelpOverlay? _helpOverlay;
     private bool _showSchemaMismatchAlert;
     private bool _alertsShown;
+    private bool _initialized;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_initialized && GitSimulator != null && Snackbar != null)
         {
-            // Initialize session storage
-            await GitSimulator.InitializeAsync();
-
-            // Show restore toast if session was restored
-            if (GitSimulator.SessionRestored && !_alertsShown)
+            _initialized = true;
+            
+            try
             {
-                Snackbar.Add("Session restored ✓", Severity.Success, config =>
+                // Initialize session storage
+                await GitSimulator.InitializeAsync();
+
+                // Show restore toast if session was restored
+                if (GitSimulator.SessionRestored && !_alertsShown)
                 {
-                    config.VisibleStateDuration = 2000;
-                    config.HideTransitionDuration = 300;
-                });
-                _alertsShown = true;
-                StateHasChanged();
-            }
+                    Snackbar.Add("Session restored ✓", Severity.Success, config =>
+                    {
+                        config.VisibleStateDuration = 2000;
+                        config.HideTransitionDuration = 300;
+                    });
+                    _alertsShown = true;
+                }
 
-            // Show schema mismatch alert if version changed
-            if (GitSimulator.SchemaMismatch && !_showSchemaMismatchAlert)
+                // Show schema mismatch alert if version changed
+                if (GitSimulator.SchemaMismatch && !_showSchemaMismatchAlert)
+                {
+                    _showSchemaMismatchAlert = true;
+                }
+
+                // Final state update
+                if (GitSimulator.SessionRestored || GitSimulator.SchemaMismatch)
+                {
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
             {
-                _showSchemaMismatchAlert = true;
-                StateHasChanged();
+                System.Diagnostics.Debug.WriteLine($"[SandboxPage] Error during initialization: {ex.Message}");
             }
         }
     }

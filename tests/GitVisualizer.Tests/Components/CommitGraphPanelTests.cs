@@ -23,7 +23,7 @@ public class CommitGraphPanelTests : BunitContext
         Services.AddSingleton<IGitSimulatorService>(_fakeGitService);
         Services.AddSingleton<IGraphRenderService>(_fakeRenderService);
         Services.AddSingleton<IThemeService>(_fakeThemeService);
-        Services.AddSingleton<MermaidJsInterop>();
+        Services.AddSingleton<GraphRendererJsInterop>();
     }
 
     [Fact]
@@ -32,15 +32,15 @@ public class CommitGraphPanelTests : BunitContext
         _fakeGitService.CurrentState = null;
         var cut = Render<CommitGraphPanel>();
         Assert.Contains("git init", cut.Markup);
-        Assert.DoesNotContain("mermaid-graph", cut.Markup);
+        Assert.DoesNotContain("git-graph", cut.Markup);
     }
 
     [Fact]
-    public void CommitGraphPanel_WhenInitialized_ShowsMermaidGraphContainer()
+    public void CommitGraphPanel_WhenInitialized_ShowsGitGraphContainer()
     {
         _fakeGitService.CurrentState = new RepoState(true, "main", [], []);
         var cut = Render<CommitGraphPanel>();
-        Assert.Contains("mermaid-graph", cut.Markup);
+        Assert.Contains("git-graph", cut.Markup);
         Assert.DoesNotContain("git init", cut.Markup);
     }
 
@@ -76,7 +76,7 @@ public class CommitGraphPanelTests : BunitContext
         // Allow async debounce + InvokeAsync to propagate
         await Task.Delay(200);
         cut.Render(); // force re-render check
-        Assert.Contains("mermaid-graph", cut.Markup);
+        Assert.Contains("git-graph", cut.Markup);
     }
 
     [Fact]

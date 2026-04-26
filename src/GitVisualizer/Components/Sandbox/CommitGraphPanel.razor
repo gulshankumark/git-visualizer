@@ -1,7 +1,7 @@
 @implements IAsyncDisposable
 @inject IGitSimulatorService GitService
 @inject IGraphRenderService GraphRender
-@inject MermaidJsInterop MermaidInterop
+@inject GraphRendererJsInterop GraphRenderer
 @inject IThemeService ThemeService
 
 <div class="commit-graph-panel"
@@ -18,14 +18,14 @@
     }
     else
     {
-        <div class="mermaid-container">
-            <div id="mermaid-graph"></div>
+        <div class="git-graph-container">
+            <div id="git-graph"></div>
         </div>
     }
 </div>
 
 @code {
-    private const string ContainerId = "mermaid-graph";
+    private const string ContainerId = "git-graph";
 
     private string _ariaLabel = "Commit graph: no repository initialised.";
     private bool _showEmptyState = true;
@@ -43,7 +43,7 @@
             _subscribed = true;
         }
 
-        await MermaidInterop.InitAsync(ThemeService.IsDarkMode);
+        await GraphRenderer.InitAsync(ThemeService.IsDarkMode);
         await RenderCurrentGraphAsync();
     }
 
@@ -53,7 +53,7 @@
     {
         try
         {
-            await MermaidInterop.InitAsync(ThemeService.IsDarkMode);
+            await GraphRenderer.InitAsync(ThemeService.IsDarkMode);
             await ScheduleRenderAsync();
         }
         catch (Exception ex) when (ex is ObjectDisposedException or TaskCanceledException) { }
@@ -84,7 +84,6 @@
         catch (TaskCanceledException) { /* debounced away */ }
         catch
         {
-            // Ensure debounce is disposed if InvokeAsync throws non-cancellation exceptions
             lock (_debounce ?? new object())
             {
                 _debounce?.Dispose();
@@ -96,7 +95,6 @@
 
     private async Task RenderCurrentGraphAsync()
     {
-        // Capture state once to avoid race with StateChanged event
         var state = GitService.CurrentState;
         _showEmptyState = state?.IsInitialized != true;
         _ariaLabel = GraphRender.BuildAriaLabel(state);
@@ -104,13 +102,13 @@
 
         if (!_showEmptyState && state is not null)
         {
-            var syntax = GraphRender.ToMermaidSyntax(state);
-            if (!string.IsNullOrEmpty(syntax))
+            var payload = GraphRender.BuildPayload(state);
+            if (payload is not null)
             {
                 try
                 {
-                    await MermaidInterop.RenderGraphAsync(ContainerId, syntax);
-                    await MermaidInterop.ScrollToHeadAsync(ContainerId);
+                    await GraphRenderer.RenderAsync(ContainerId, payload);
+                    await GraphRenderer.ScrollToHeadAsync(ContainerId);
                 }
                 catch (Exception ex) when (ex is JSException or TaskCanceledException) { }
             }
@@ -123,6 +121,6 @@
         ThemeService.ThemeChanged -= HandleThemeChanged;
         _debounce?.Cancel();
         _debounce?.Dispose();
-        await MermaidInterop.DisposeAsync();
+        await GraphRenderer.DisposeAsync();
     }
 }

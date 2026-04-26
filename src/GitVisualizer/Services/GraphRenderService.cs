@@ -1,66 +1,48 @@
 // src/GitVisualizer/Services/GraphRenderService.cs
-using System.Text;
 using GitVisualizer.Models;
 
 namespace GitVisualizer.Services;
 
 public sealed class GraphRenderService : IGraphRenderService
 {
-    public string ToMermaidSyntax(RepoState state)
+    public GraphRenderPayload? BuildPayload(RepoState state)
     {
         var graph = state.Graph;
         if (graph is null || !state.IsInitialized || graph.Commits.Count == 0)
-            return string.Empty;
+            return null;
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"%%{{init: {{'gitGraph': {{'mainBranchName': '{EscapeId(graph.HeadBranch)}', 'rotateCommitLabel': false}}}}}}%%");
-        sb.AppendLine("gitGraph LR:");
-
-        // Build commit-to-branch ownership via first-parent walk
         var commitToBranch = BuildCommitToBranch(graph);
 
-        // Emit commits sorted oldest-first (already sorted by gitGetGraph)
-        string? lastBranch = null;
+        // Trunk = main/master if either exists, else the head branch. The first
+        // chronological commit always belongs to the trunk after the priority walk.
+        var trunkBranch = graph.Commits.Count > 0 && commitToBranch.TryGetValue(graph.Commits[0].Oid, out var t)
+            ? t
+            : graph.HeadBranch;
 
-        foreach (var commit in graph.Commits)
+        var headTipOid = graph.BranchTips.TryGetValue(graph.HeadBranch, out var tip) ? tip : null;
+
+        var renderCommits = new List<RenderCommit>(graph.Commits.Count);
+        foreach (var c in graph.Commits)
         {
-            var branch = commitToBranch.TryGetValue(commit.Oid, out var b) ? b : graph.HeadBranch;
-
-            // Emit branch switch if needed
-            if (lastBranch is null)
-            {
-                // First commit — always on HeadBranch; no explicit checkout needed
-                lastBranch = branch;
-            }
-            else if (branch != lastBranch)
-            {
-                sb.AppendLine($"   branch {EscapeId(branch)}");
-                sb.AppendLine($"   checkout {EscapeId(branch)}");
-                lastBranch = branch;
-            }
-
-            if (commit.Parents.Count >= 2)
-            {
-                // Merge commit — find the source branch from second parent
-                var sourceOid = commit.Parents[1];
-                var sourceBranch = commitToBranch.TryGetValue(sourceOid, out var sb2) ? sb2 : "unknown";
-                // Checkout the target branch first if we were on a different branch
-                var targetBranch = commitToBranch.TryGetValue(commit.Parents[0], out var tb) ? tb : graph.HeadBranch;
-                if (lastBranch != targetBranch)
-                {
-                    sb.AppendLine($"   checkout {EscapeId(targetBranch)}");
-                    lastBranch = targetBranch;
-                }
-                sb.AppendLine($"   merge {EscapeId(sourceBranch)} id: \"{EscapeId(commit.ShortOid)}\"");
-            }
-            else
-            {
-                var msg = EscapeMessage(commit.Message);
-                sb.AppendLine($"   commit id: \"{EscapeId(commit.ShortOid)}\" msg: \"{msg}\"");
-            }
+            var owningBranch = commitToBranch.TryGetValue(c.Oid, out var ob) ? ob : graph.HeadBranch;
+            renderCommits.Add(new RenderCommit(
+                c.Oid,
+                c.ShortOid,
+                c.Message,
+                c.Author,
+                c.Timestamp,
+                c.Parents,
+                owningBranch,
+                IsHead: headTipOid is not null && c.Oid == headTipOid,
+                IsMerge: c.Parents.Count >= 2));
         }
 
-        return sb.ToString().TrimEnd();
+        return new GraphRenderPayload(
+            HeadBranch: graph.HeadBranch,
+            TrunkBranch: trunkBranch,
+            Commits: renderCommits,
+            BranchTips: graph.BranchTips,
+            CommitBranch: commitToBranch);
     }
 
     public string BuildAriaLabel(RepoState? state)
@@ -82,16 +64,21 @@ public sealed class GraphRenderService : IGraphRenderService
     {
         var result = new Dictionary<string, string>();
 
-        // Process HeadBranch first so it gets first-parent priority
+        // Walk the trunk first (main/master) so shared ancestors are attributed
+        // to it instead of whichever feature branch HEAD currently points at.
+        // Falls back to HeadBranch when no main/master exists.
+        static int Priority(string b, string head)
+            => b == "main" ? 0 : b == "master" ? 1 : b == head ? 2 : 3;
+
         var orderedBranches = graph.BranchTips.Keys
-            .OrderBy(b => b == graph.HeadBranch ? 0 : 1)
+            .OrderBy(b => Priority(b, graph.HeadBranch))
+            .ThenBy(b => b, StringComparer.Ordinal)
             .ToList();
 
         foreach (var branch in orderedBranches)
         {
             if (!graph.BranchTips.TryGetValue(branch, out var tipOid)) continue;
 
-            // Walk first-parent chain from tip
             var current = tipOid;
             var visited = new HashSet<string>();
 
@@ -106,14 +93,5 @@ public sealed class GraphRenderService : IGraphRenderService
         }
 
         return result;
-    }
-
-    private static string EscapeId(string id)
-        => id.Replace("\"", "'").Replace(" ", "-");
-
-    private static string EscapeMessage(string message)
-    {
-        var truncated = message.Length > 40 ? message[..40] : message;
-        return truncated.Replace("\"", "'");
     }
 }

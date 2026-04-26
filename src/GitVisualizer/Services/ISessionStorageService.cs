@@ -12,6 +12,9 @@ public interface ISessionStorageService : IAsyncDisposable
     
     Task<UserPrefs?> LoadPrefsAsync();
     Task SavePrefsAsync(UserPrefs prefs);
+    
+    /// <summary>Clear all gitvis.* keys from localStorage (destructive reset).</summary>
+    Task ClearAllAsync();
 }
 
 public record UserPrefs(string Theme);

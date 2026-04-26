@@ -101,6 +101,23 @@ public sealed class SessionStorageService : ISessionStorageService
         }
     }
 
+    public async Task ClearAllAsync()
+    {
+        try
+        {
+            // Clear all gitvis.* keys from localStorage
+            _storage.RemoveItem(StateKey);
+            _storage.RemoveItem(PrefsKey);
+            System.Diagnostics.Debug.WriteLine("[SessionStorageService] Cleared all gitvis.* keys from localStorage");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[SessionStorageService] Error clearing storage: {ex.Message}");
+            // Don't rethrow — allow reset to continue even if storage clear fails
+        }
+    }
+
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
         // localStorage doesn't need explicit cleanup

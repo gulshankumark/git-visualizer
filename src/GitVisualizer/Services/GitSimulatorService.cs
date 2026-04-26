@@ -26,6 +26,7 @@ public sealed class GitSimulatorService : IGitSimulatorService
         _gitJs = gitJs;
         _commandParser = commandParser;
         _sessionStorage = sessionStorage;
+        _isProcessing = false;
     }
 
     public bool IsProcessing => _isProcessing;
@@ -269,12 +270,30 @@ public sealed class GitSimulatorService : IGitSimulatorService
         return Task.CompletedTask;
     }
 
-    public Task ResetAsync()
+    public async Task ResetAsync()
     {
-        _history.Clear();
-        _currentState = null;
-        StateChanged?.Invoke();
-        return Task.CompletedTask;
+        try
+        {
+            lock (_stateLock)
+            {
+                _history.Clear();
+                _currentState = null;
+            }
+            
+            // Clear localStorage
+            await _sessionStorage.ClearAllAsync();
+            
+            // Reset IndexedDB via git interop
+            await _gitJs.GitResetAsync();
+            
+            System.Diagnostics.Debug.WriteLine("[GitSimulatorService] Complete reset finished (history, state, storage, IndexedDB)");
+            StateChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GitSimulatorService] Error during reset: {ex.Message}");
+            // Errors are logged but don't rethrow — partial reset is acceptable
+        }
     }
 
     private CommandResult BuildStatusResult()

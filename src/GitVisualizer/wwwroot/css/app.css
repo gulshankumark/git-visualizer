@@ -23,41 +23,40 @@ html, body {
     overflow: hidden;
 }
 
-/* ─── Mermaid typography (FR10 — min 14px node labels) ─── */
-.mermaid text,
-.mermaid .label {
+/* ─── Git graph typography (FR10 — min 14px node labels) ─── */
+#git-graph text,
+#git-graph .label {
     font-size:   max(var(--gitvis-graph-node-size), 14px) !important;
     font-family: var(--gitvis-font-ui);
 }
 
-/* ─── Mermaid dark/light theme via CSS vars (AC-6 / UX-DR18) ─── */
-/* Tokens are injected at runtime by ThemeService; kept here for reference */
+/* ─── Git graph dark/light theme via CSS vars (AC-6 / UX-DR18) ─── */
 :root[data-theme="dark"] {
-    --gitvis-mermaid-bg:            #0D1117;
-    --gitvis-mermaid-node-bg:       #161B22;
-    --gitvis-mermaid-node-border:   #30363D;
-    --gitvis-mermaid-node-text:     #E6EDF3;
-    --gitvis-mermaid-edge:          #8B949E;
-    --gitvis-mermaid-branch-0:      #3FB950;
-    --gitvis-mermaid-branch-1:      #58A6FF;
-    --gitvis-mermaid-branch-2:      #BC8CFF;
-    --gitvis-mermaid-branch-3:      #FF7B72;
-    --gitvis-mermaid-branch-4:      #FFA657;
-    --gitvis-mermaid-branch-5:      #79C0FF;
+    --gitvis-graph-bg:            #0D1117;
+    --gitvis-graph-node-bg:       #161B22;
+    --gitvis-graph-node-border:   #30363D;
+    --gitvis-graph-node-text:     #E6EDF3;
+    --gitvis-graph-edge:          #8B949E;
+    --gitvis-graph-branch-0:      #3FB950;
+    --gitvis-graph-branch-1:      #58A6FF;
+    --gitvis-graph-branch-2:      #BC8CFF;
+    --gitvis-graph-branch-3:      #FF7B72;
+    --gitvis-graph-branch-4:      #FFA657;
+    --gitvis-graph-branch-5:      #79C0FF;
 }
 
 :root[data-theme="light"] {
-    --gitvis-mermaid-bg:            #FFFFFF;
-    --gitvis-mermaid-node-bg:       #F6F8FA;
-    --gitvis-mermaid-node-border:   #D0D7DE;
-    --gitvis-mermaid-node-text:     #24292F;
-    --gitvis-mermaid-edge:          #57606A;
-    --gitvis-mermaid-branch-0:      #2DA44E;
-    --gitvis-mermaid-branch-1:      #0969DA;
-    --gitvis-mermaid-branch-2:      #8250DF;
-    --gitvis-mermaid-branch-3:      #CF222E;
-    --gitvis-mermaid-branch-4:      #BC4C00;
-    --gitvis-mermaid-branch-5:      #0550AE;
+    --gitvis-graph-bg:            #FFFFFF;
+    --gitvis-graph-node-bg:       #F6F8FA;
+    --gitvis-graph-node-border:   #D0D7DE;
+    --gitvis-graph-node-text:     #24292F;
+    --gitvis-graph-edge:          #57606A;
+    --gitvis-graph-branch-0:      #2DA44E;
+    --gitvis-graph-branch-1:      #0969DA;
+    --gitvis-graph-branch-2:      #8250DF;
+    --gitvis-graph-branch-3:      #CF222E;
+    --gitvis-graph-branch-4:      #BC4C00;
+    --gitvis-graph-branch-5:      #0550AE;
 }
 
 /* ─── Suppress all motion when user prefers reduced motion (FR25) ─── */

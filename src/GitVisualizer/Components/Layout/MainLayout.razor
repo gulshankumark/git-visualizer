@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject IThemeService ThemeService
+@inject IGitSimulatorService GitSimulator
 @implements IDisposable
 
 <MudLayout Style="height:100vh; overflow:hidden;">
@@ -9,7 +10,7 @@
         </MudText>
         <MudTooltip Text="Reset sandbox (Ctrl+Shift+R)">
             <MudIconButton Icon="@Icons.Material.Outlined.RestartAlt"
-                           Disabled="true"
+                           OnClick="@(() => _isResetDialogOpen = true)"
                            aria-label="Reset sandbox" />
         </MudTooltip>
         <MudTooltip Text="Replay mode (Ctrl+Shift+P)">
@@ -34,7 +35,13 @@
     </MudMainContent>
 </MudLayout>
 
+<ResetConfirmDialog @bind-IsOpen="_isResetDialogOpen"
+                    OnConfirm="HandleResetConfirm"
+                    OnCancel="HandleResetCancel" />
+
 @code {
+    private bool _isResetDialogOpen;
+
     protected override void OnInitialized()
     {
         ThemeService.ThemeChanged += OnThemeChanged;
@@ -42,5 +49,28 @@
 
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
 
+    private async Task HandleResetConfirm()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await GitSimulator.ResetAsync();
+        sw.Stop();
+        
+        System.Diagnostics.Debug.WriteLine($"[MainLayout] Reset completed in {sw.ElapsedMilliseconds}ms");
+        
+        if (sw.ElapsedMilliseconds > 200)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainLayout] WARNING: Reset took longer than target 200ms");
+        }
+
+        _isResetDialogOpen = false;
+    }
+
+    private Task HandleResetCancel()
+    {
+        _isResetDialogOpen = false;
+        return Task.CompletedTask;
+    }
+
     public void Dispose() => ThemeService.ThemeChanged -= OnThemeChanged;
 }
+

@@ -21524,8 +21524,20 @@ async function gitBranch(name) {
 }
 async function gitCheckout(ref, createBranch = false) {
   try {
-    if (createBranch) await isomorphic_git_default.branch({ fs, dir, ref });
-    await isomorphic_git_default.checkout({ fs, dir, ref });
+    if (createBranch) {
+      await isomorphic_git_default.branch({ fs, dir, ref });
+      await isomorphic_git_default.checkout({ fs, dir, ref });
+    } else {
+      try {
+        await isomorphic_git_default.checkout({ fs, dir, ref, force: true });
+      } catch (e) {
+        if (e.message && e.message.includes("Could not find")) {
+          await isomorphic_git_default.checkout({ fs, dir, ref: `refs/heads/${ref}`, force: true });
+        } else {
+          throw e;
+        }
+      }
+    }
     return { success: true, message: `Switched to branch '${ref}'` };
   } catch (e) {
     throw new Error(`git checkout failed: ${e.message}`);
@@ -21563,9 +21575,14 @@ async function gitGetGraph() {
   try {
     const branches = await isomorphic_git_default.listBranches({ fs, dir });
     const headBranch = await isomorphic_git_default.currentBranch({ fs, dir }) ?? "main";
+    const trunkPriority = (b) => b === "main" ? 0 : b === "master" ? 1 : b === headBranch ? 2 : 3;
+    const orderedBranches = [...branches].sort((a, b) => {
+      const pa = trunkPriority(a), pb = trunkPriority(b);
+      return pa !== pb ? pa - pb : a.localeCompare(b);
+    });
     const seen = /* @__PURE__ */ new Map();
     const branchTips = {};
-    for (const branch2 of branches) {
+    for (const branch2 of orderedBranches) {
       let log2;
       try {
         log2 = await isomorphic_git_default.log({ fs, dir, ref: branch2, depth: 50 });
@@ -21593,6 +21610,23 @@ async function gitGetGraph() {
     return { success: false, error: e.message, branches: [], headBranch: "main", commits: [], branchTips: {} };
   }
 }
+async function gitReset() {
+  try {
+    _repoInitialized = false;
+    const fresh = new import_lightning_fs.default("gitfs", { wipe: true });
+    Object.assign(fs, fresh);
+    await new Promise((resolve) => {
+      const req = indexedDB.deleteDatabase("gitfs");
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+      req.onblocked = () => resolve();
+    });
+    return { success: true, message: "Repository reset" };
+  } catch (e) {
+    console.error("git reset failed:", e);
+    return { success: false, message: `Reset failed: ${e.message}` };
+  }
+}
 export {
   gitAdd,
   gitBranch,
@@ -21601,7 +21635,8 @@ export {
   gitGetGraph,
   gitInit,
   gitLog,
-  gitMerge
+  gitMerge,
+  gitReset
 };
 /*! Bundled license information:
 

@@ -6,9 +6,9 @@ namespace GitVisualizer.Tests.Fakes;
 
 internal sealed class FakeGraphRenderService : IGraphRenderService
 {
-    public string SyntaxToReturn { get; set; } = "";
+    public GraphRenderPayload? PayloadToReturn { get; set; }
     public string AriaLabelToReturn { get; set; } = "Commit graph: main branch, 1 commit.";
 
-    public string ToMermaidSyntax(RepoState state) => SyntaxToReturn;
+    public GraphRenderPayload? BuildPayload(RepoState state) => PayloadToReturn;
     public string BuildAriaLabel(RepoState? state) => AriaLabelToReturn;
 }

@@ -1,22 +1,82 @@
 @* src/GitVisualizer/Components/Common/ResetConfirmDialog.razor *@
-<div class="reset-confirm-backdrop">
-    <div class="reset-confirm-dialog">
-        <p>Reset the sandbox? This will clear all git history and cannot be undone.</p>
-        <MudButton aria-label="Confirm reset"
-                   Color="Color.Error"
-                   Variant="Variant.Filled"
-                   OnClick="OnConfirm">
-            Reset
-        </MudButton>
-        <MudButton aria-label="Cancel reset"
-                   Variant="Variant.Text"
-                   OnClick="OnCancel">
+<MudDialog Visible="@IsOpen"
+           VisibleChanged="@OnVisibleChanged"
+           Options="@DialogOptions"
+           aria-label="Reset confirmation dialog">
+    <DialogContent>
+        <MudText>Reset will clear your entire sandbox history. This cannot be undone.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" 
+                   OnClick="HandleCancel"
+                   Disabled="@_isResetting"
+                   AutoFocus="true">
             Cancel
         </MudButton>
-    </div>
-</div>
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Error"
+                   OnClick="HandleConfirm"
+                   Disabled="@_isResetting">
+            @if (_isResetting)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Resetting...</MudText>
+            }
+            else
+            {
+                <MudText>Reset</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
 
 @code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter, EditorRequired] public EventCallback OnConfirm { get; set; }
-    [Parameter, EditorRequired] public EventCallback OnCancel  { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnCancel { get; set; }
+    
+    private bool _isResetting;
+
+    private DialogOptions DialogOptions = new()
+    {
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small,
+        CloseButton = true
+    };
+
+    private async Task HandleConfirm()
+    {
+        _isResetting = true;
+        StateHasChanged();
+        try
+        {
+            await OnConfirm.InvokeAsync();
+        }
+        finally
+        {
+            _isResetting = false;
+            StateHasChanged();
+            IsOpen = false;
+            await IsOpenChanged.InvokeAsync(IsOpen);
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(IsOpen);
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen == visible) return;
+        IsOpen = visible;
+        await IsOpenChanged.InvokeAsync(visible);
+        if (!visible && !_isResetting)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
 }
