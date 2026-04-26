@@ -52,7 +52,9 @@ public sealed class GitSimulatorService : IGitSimulatorService
             ("git", "init")     => InitRepoAsync(),
             ("git", "add")      => AddAsync(parts.Length > 2 ? parts[2] : "."),
             ("git", "commit")   => CommitAsync(ExtractCommitMessage(parts)),
-            ("git", "branch")   => parts.Length > 2 ? CreateBranchAsync(parts[2]) : GetLogAsync(),
+            ("git", "branch")   => parts.Length > 2
+                                    ? CreateBranchAsync(parts[2])
+                                    : Task.FromResult(new CommandResult(true, "Branch listing is not yet available. Use 'git log' to see commit history, or 'git branch <name>' to create a branch.", null, null, _currentState)),
             ("git", "checkout") => parts.Length > 3 && parts[2] == "-b"
                                     ? CheckoutAsync(parts[3], createBranch: true)
                                     : CheckoutAsync(parts.Length > 2 ? parts[2] : "main"),

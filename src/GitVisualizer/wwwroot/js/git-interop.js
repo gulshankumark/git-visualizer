@@ -21489,9 +21489,10 @@ async function gitAdd(filepath = ".") {
   try {
     if (filepath === ".") {
       const files = await isomorphic_git_default.statusMatrix({ fs, dir });
-      await Promise.all(
-        files.filter(([, head, workdir]) => workdir !== head).map(([name]) => isomorphic_git_default.add({ fs, dir, filepath: name }))
-      );
+      const toStage = files.filter(([, head, workdir]) => workdir !== head);
+      if (toStage.length === 0)
+        return { success: true, message: "Nothing to add (working tree clean)" };
+      await Promise.all(toStage.map(([name]) => isomorphic_git_default.add({ fs, dir, filepath: name })));
     } else {
       await isomorphic_git_default.add({ fs, dir, filepath });
     }
