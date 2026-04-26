@@ -26,6 +26,11 @@ builder.Services.AddSingleton<IGitSimulatorService, GitSimulatorService>();
 // Future singletons — added in Stories 2.3–2.5:
 builder.Services.AddSingleton<ICommandParserService, CommandParserService>();
 builder.Services.AddSingleton<IGraphRenderService, GraphRenderService>();
-builder.Services.AddSingleton<MermaidJsInterop>();
+builder.Services.AddSingleton<GraphRendererJsInterop>();
+
+// Story 3.3 — Storage quota monitoring
+builder.Services.AddSingleton<StorageJsInterop>();
+builder.Services.AddSingleton<IStorageJsInterop>(sp => sp.GetRequiredService<StorageJsInterop>());
+builder.Services.AddSingleton<IStorageMonitorService, StorageMonitorService>();
 
 await builder.Build().RunAsync();

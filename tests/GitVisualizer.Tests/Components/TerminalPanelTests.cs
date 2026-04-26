@@ -16,12 +16,14 @@ namespace GitVisualizer.Tests.Components;
 public class TerminalPanelTests : BunitContext
 {
     private readonly FakeGitSimulatorService _git = new();
+    private readonly FakeStorageMonitorService _storage = new();
 
     public TerminalPanelTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddMudServices();
         Services.AddSingleton<IGitSimulatorService>(_git);
+        Services.AddSingleton<IStorageMonitorService>(_storage);
     }
 
     protected override void Dispose(bool disposing)
@@ -47,8 +49,7 @@ public class TerminalPanelTests : BunitContext
     public void TerminalPanel_WhenIdle_ProgressBarIsHidden()
     {
         var cut = Render<TerminalPanel>();
-        var bar = cut.Find(".terminal-progress");
-        Assert.Contains("terminal-progress--hidden", bar.ClassName ?? "");
+        Assert.Empty(cut.FindAll(".terminal-progress"));
     }
 
     [Fact]
@@ -56,8 +57,7 @@ public class TerminalPanelTests : BunitContext
     {
         _git.IsProcessing = true;
         var cut = Render<TerminalPanel>();
-        var bar = cut.Find(".terminal-progress");
-        Assert.DoesNotContain("terminal-progress--hidden", bar.ClassName ?? "");
+        Assert.NotNull(cut.Find(".terminal-progress"));
     }
 
     // ── AC2: Output rendering ────────────────────────────────────────────────
@@ -168,40 +168,8 @@ public class TerminalPanelTests : BunitContext
         Assert.Equal(1, _git.ClearCount);
     }
 
-    // ── AC5: Reset button → ResetConfirmDialog ───────────────────────────────
-
-    [Fact]
-    public void TerminalPanel_ResetButton_ShowsConfirmDialog()
-    {
-        var cut = Render<TerminalPanel>();
-        cut.Find("[aria-label='Reset sandbox']").Click();
-
-        Assert.Contains("reset-confirm-backdrop", cut.Markup);
-    }
-
-    [Fact]
-    public void TerminalPanel_ResetConfirmed_CallsResetAsyncAndHidesDialog()
-    {
-        var cut = Render<TerminalPanel>();
-        cut.Find("[aria-label='Reset sandbox']").Click();
-        cut.Find("[aria-label='Confirm reset']").Click();
-
-        Assert.Equal(1, _git.ResetCount);
-        Assert.DoesNotContain("reset-confirm-backdrop", cut.Markup);
-    }
-
-    [Fact]
-    public void TerminalPanel_ResetCancelled_HidesDialogWithoutReset()
-    {
-        var cut = Render<TerminalPanel>();
-        cut.Find("[aria-label='Reset sandbox']").Click();
-        cut.Find("[aria-label='Cancel reset']").Click();
-
-        Assert.Equal(0, _git.ResetCount);
-        Assert.DoesNotContain("reset-confirm-backdrop", cut.Markup);
-    }
-
     // ── AC3: History navigation ──────────────────────────────────────────────
+
 
     [Fact]
     public void TerminalPanel_ArrowUp_FillsInputWithMostRecentCommand()

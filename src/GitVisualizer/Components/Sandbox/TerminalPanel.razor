@@ -1,5 +1,6 @@
 @* src/GitVisualizer/Components/Sandbox/TerminalPanel.razor *@
 @inject IGitSimulatorService GitService
+@inject IStorageMonitorService StorageService
 @implements IDisposable
 
 <div class="terminal-panel">
@@ -10,14 +11,32 @@
                        aria-label="Clear terminal output"
                        Size="Size.Small"
                        OnClick="HandleClearAsync" />
-        <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
-                       aria-label="Reset sandbox"
-                       Size="Size.Small"
-                       Disabled="@GitService.IsProcessing"
-                       OnClick="ShowResetDialog" />
     </div>
 
-    <MudProgressLinear Class="@ProgressBarClass" Indeterminate="true" />
+    @if (GitService.IsProcessing)
+    {
+        <MudProgressLinear Class="terminal-progress" Indeterminate="true" />
+    }
+
+    @if (_storageStatus?.IsWarning == true)
+    {
+        <MudAlert Class="terminal-alert storage-alert"
+                  Severity="Severity.Warning"
+                  Dense="true"
+                  OnClose="() => StateHasChanged()">
+            <div>
+                Storage usage is high (@($"{_storageStatus.UsagePercent:F1}%")).
+                @if (_storageStatus.IsBlocked)
+                {
+                    <span>Commands are blocked. <MudLink Href="#reset">Reset your data</MudLink> to continue.</span>
+                }
+                else
+                {
+                    <span>Please save your work.</span>
+                }
+            </div>
+        </MudAlert>
+    }
 
     <div class="terminal-output" aria-live="polite">
         @foreach (var entry in GitService.CommandHistory)
@@ -50,17 +69,12 @@
                   class="terminal-input"
                   aria-label="Git command input"
                   rows="1"
+                  disabled="@(_storageStatus?.IsBlocked == true)"
                   value="@_inputText"
                   @oninput="HandleInputChange"
                   @onkeydown="HandleKeyDownAsync"
-                  placeholder="Enter git command..."></textarea>
+                  placeholder="@(_storageStatus?.IsBlocked == true ? "Storage full — reset to continue" : "Enter git command...")"></textarea>
     </div>
-
-    @if (_showResetDialog)
-    {
-        <ResetConfirmDialog OnConfirm="HandleResetConfirmedAsync"
-                            OnCancel="HandleResetCancelled" />
-    }
 
 </div>
 
@@ -72,15 +86,16 @@
     private string _inputText = string.Empty;
     private string _savedInput = string.Empty;
     private int _historyIndex = -1;
-    private bool _showResetDialog;
+    private StorageStatus? _storageStatus;
 
-    private string ProgressBarClass =>
-        GitService.IsProcessing
-            ? "terminal-progress"
-            : "terminal-progress terminal-progress--hidden";
-
-    protected override void OnInitialized()
-        => GitService.StateChanged += OnServiceStateChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        GitService.StateChanged += OnServiceStateChanged;
+        StorageService.OnStorageStatusChanged += OnStorageStatusChanged;
+        
+        // Initialize storage status on first load
+        _storageStatus = await StorageService.GetStatusAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -93,6 +108,12 @@
 
     private void OnServiceStateChanged()
         => InvokeAsync(StateHasChanged);
+
+    private void OnStorageStatusChanged(StorageStatus status)
+    {
+        _storageStatus = status;
+        InvokeAsync(StateHasChanged);
+    }
 
     private void HandleInputChange(ChangeEventArgs e)
         => _inputText = e.Value?.ToString() ?? string.Empty;
@@ -123,6 +144,13 @@
         var command = _inputText.Trim();
         if (string.IsNullOrEmpty(command)) return;
 
+        // Check storage block threshold
+        if (_storageStatus?.IsBlocked == true)
+        {
+            // Storage is blocked — don't allow command execution
+            return;
+        }
+
         _historyIndex = -1;
         _savedInput = string.Empty;
 
@@ -147,6 +175,9 @@
         try
         {
             await GitService.ExecuteCommandAsync(command);
+            
+            // Check storage after command execution
+            _storageStatus = await StorageService.GetStatusAsync();
         }
         catch
         {
@@ -193,21 +224,10 @@
         await GitService.ClearAsync();
     }
 
-    private void ShowResetDialog()
-        => _showResetDialog = true;
-
-    private async Task HandleResetConfirmedAsync()
-    {
-        _historyIndex = -1;
-        _savedInput = string.Empty;
-        await GitService.ResetAsync();
-        _showResetDialog = false;
-    }
-
-    private void HandleResetCancelled()
-        => _showResetDialog = false;
-
     public void Dispose()
-        => GitService.StateChanged -= OnServiceStateChanged;
+    {
+        GitService.StateChanged -= OnServiceStateChanged;
+        StorageService.OnStorageStatusChanged -= OnStorageStatusChanged;
+    }
 }
 
