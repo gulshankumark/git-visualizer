@@ -2,6 +2,7 @@
 using GitVisualizer.Interop;
 using GitVisualizer.Models;
 using Microsoft.JSInterop;
+using System.Text.Json;
 
 namespace GitVisualizer.Services;
 
@@ -9,19 +10,71 @@ public sealed class GitSimulatorService : IGitSimulatorService
 {
     private readonly GitJsInterop _gitJs;
     private readonly ICommandParserService _commandParser;
+    private readonly ISessionStorageService _sessionStorage;
     private readonly List<CommandHistoryEntry> _history = new();
+    private readonly object _stateLock = new();
     private RepoState? _currentState;
     private bool _isProcessing;
+    private bool _sessionRestored;
+    private bool _schemaMismatch;
 
-    public GitSimulatorService(GitJsInterop gitJs, ICommandParserService commandParser)
+    public GitSimulatorService(
+        GitJsInterop gitJs,
+        ICommandParserService commandParser,
+        ISessionStorageService sessionStorage)
     {
         _gitJs = gitJs;
         _commandParser = commandParser;
+        _sessionStorage = sessionStorage;
     }
 
     public bool IsProcessing => _isProcessing;
     public IReadOnlyList<CommandHistoryEntry> CommandHistory => _history;
+    public RepoState? CurrentState
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _currentState;
+            }
+        }
+    }
+    public bool SessionRestored => _sessionRestored;
+    public bool SchemaMismatch => _schemaMismatch;
     public event Action? StateChanged;
+
+    public async Task InitializeAsync()
+    {
+        try
+        {
+            var savedState = await _sessionStorage.LoadStateAsync();
+            if (savedState != null)
+            {
+                lock (_stateLock)
+                {
+                    _currentState = savedState;
+                    _sessionRestored = true;
+                }
+                System.Diagnostics.Debug.WriteLine("[GitSimulatorService] Session restored from localStorage");
+                StateChanged?.Invoke();
+            }
+            
+            // Check if schema mismatch was detected during load
+            _schemaMismatch = _sessionStorage.SchemaMismatchDetected;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[GitSimulatorService] Error initializing from session: {ex.Message}");
+        }
+    }
+
+    public async Task SetSchemaMismatchFlagAsync()
+    {
+        _schemaMismatch = true;
+        await Task.CompletedTask;
+    }
 
     public async Task<CommandResult> ExecuteCommandAsync(string rawCommand)
     {
@@ -40,6 +93,17 @@ public sealed class GitSimulatorService : IGitSimulatorService
         finally
         {
             _isProcessing = false;
+            await TryUpdateGraphAsync();
+            
+            // Save state to session storage after command completes
+            lock (_stateLock)
+            {
+                if (_currentState != null)
+                {
+                    _ = _sessionStorage.SaveStateAsync(_currentState);
+                }
+            }
+            
             StateChanged?.Invoke();
         }
         return result;
@@ -230,6 +294,30 @@ public sealed class GitSimulatorService : IGitSimulatorService
 
         var output = $"On branch {_currentState.CurrentBranch ?? "main"}\n{staged}{untracked}{clean}".TrimEnd();
         return new CommandResult(true, output, null, null, _currentState);
+    }
+
+    private async Task TryUpdateGraphAsync()
+    {
+        lock (_stateLock)
+        {
+            if (_currentState?.IsInitialized != true) return;
+        }
+        
+        try
+        {
+            var json = await _gitJs.GitGetGraphAsync();
+            var graph = CommitGraph.FromJson(json);
+            lock (_stateLock)
+            {
+                if (_currentState is not null)
+                {
+                    _currentState = _currentState with { Graph = graph };
+                }
+            }
+        }
+        catch (JsonException) { /* Graph is best-effort — malformed JSON */ }
+        catch (InvalidOperationException) { /* Graph is best-effort — invalid state */ }
+        catch (TimeoutException) { /* Graph is best-effort — JS interop timeout */ }
     }
 
     private const string HelpText =

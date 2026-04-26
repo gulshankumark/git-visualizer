@@ -1,0 +1,307 @@
+diff --git a/src/GitVisualizer/Components/Sandbox/CommitGraphPanel.razor b/src/GitVisualizer/Components/Sandbox/CommitGraphPanel.razor
+index db29589..a303383 100644
+--- a/src/GitVisualizer/Components/Sandbox/CommitGraphPanel.razor
++++ b/src/GitVisualizer/Components/Sandbox/CommitGraphPanel.razor
+@@ -1,20 +1,101 @@
++@implements IAsyncDisposable
++@inject IGitSimulatorService GitService
++@inject IGraphRenderService GraphRender
++@inject MermaidJsInterop MermaidInterop
++@inject IThemeService ThemeService
++
+ <div class="commit-graph-panel"
+      role="img"
+-     aria-label="@(HasCommands ? "Git repository commit graph" : "Git repository graph ΓÇö no commits yet")">
+-    @if (!HasCommands)
++     aria-label="@_ariaLabel"
++     tabindex="0">
++    @if (_showEmptyState)
+     {
+         <div class="empty-state">
+             <div class="empty-state-border">
+-                <MudText>Your repository will appear here</MudText>
++                <MudText>Initialise a repo with <code>git init</code> to see the commit graph.</MudText>
+             </div>
+         </div>
+     }
+     else
+     {
+-        <div id="mermaid-graph"></div>
++        <div class="mermaid-container">
++            <div id="mermaid-graph"></div>
++        </div>
+     }
+ </div>
+ 
+ @code {
+-    [Parameter] public bool HasCommands { get; set; } = false;
++    private const string ContainerId = "mermaid-graph";
++
++    private string _ariaLabel = "Commit graph: no repository initialised.";
++    private bool _showEmptyState = true;
++    private CancellationTokenSource? _debounce;
++
++    protected override async Task OnAfterRenderAsync(bool firstRender)
++    {
++        if (!firstRender) return;
++
++        GitService.StateChanged   += HandleStateChanged;
++        ThemeService.ThemeChanged += HandleThemeChanged;
++
++        await MermaidInterop.InitAsync(ThemeService.IsDarkMode);
++        await RenderCurrentGraphAsync();
++    }
++
++    private async void HandleStateChanged() => await ScheduleRenderAsync();
++
++    private async void HandleThemeChanged()
++    {
++        try
++        {
++            await MermaidInterop.InitAsync(ThemeService.IsDarkMode);
++            await ScheduleRenderAsync();
++        }
++        catch (Exception ex) when (ex is ObjectDisposedException or TaskCanceledException) { }
++    }
++
++    private async Task ScheduleRenderAsync()
++    {
++        _debounce?.Cancel();
++        _debounce?.Dispose();
++        _debounce = new CancellationTokenSource();
++        var token = _debounce.Token;
++        try
++        {
++            await Task.Delay(50, token);
++            await InvokeAsync(RenderCurrentGraphAsync);
++        }
++        catch (TaskCanceledException) { /* debounced away */ }
++    }
++
++    private async Task RenderCurrentGraphAsync()
++    {
++        var state = GitService.CurrentState;
++        _showEmptyState = state?.IsInitialized != true;
++        _ariaLabel = GraphRender.BuildAriaLabel(state);
++        StateHasChanged();
++
++        if (!_showEmptyState && state is not null)
++        {
++            var syntax = GraphRender.ToMermaidSyntax(state);
++            if (!string.IsNullOrEmpty(syntax))
++            {
++                try
++                {
++                    await MermaidInterop.RenderGraphAsync(ContainerId, syntax);
++                    await MermaidInterop.ScrollToHeadAsync(ContainerId);
++                }
++                catch (Exception ex) when (ex is JSException or TaskCanceledException) { }
++            }
++        }
++    }
++
++    public async ValueTask DisposeAsync()
++    {
++        GitService.StateChanged   -= HandleStateChanged;
++        ThemeService.ThemeChanged -= HandleThemeChanged;
++        _debounce?.Cancel();
++        _debounce?.Dispose();
++        await MermaidInterop.DisposeAsync();
++    }
+ }
+diff --git a/src/GitVisualizer/Components/Sandbox/CommitGraphPanel.razor.css b/src/GitVisualizer/Components/Sandbox/CommitGraphPanel.razor.css
+index 66d57fe..8359d33 100644
+--- a/src/GitVisualizer/Components/Sandbox/CommitGraphPanel.razor.css
++++ b/src/GitVisualizer/Components/Sandbox/CommitGraphPanel.razor.css
+@@ -24,3 +24,22 @@
+     max-width:     400px;
+     text-align:    center;
+ }
++
++/* ΓöÇΓöÇΓöÇ Mermaid graph container layout ΓöÇΓöÇΓöÇ */
++.mermaid-container {
++    width:    100%;
++    height:   100%;
++    overflow: auto;
++    outline:  none;
++}
++
++/* ΓöÇΓöÇΓöÇ HEAD commit glow (suppressed by app.css reduced-motion rule) ΓöÇΓöÇΓöÇ */
++@keyframes gitvis-commit-glow {
++    0%   { filter: drop-shadow(0 0 4px var(--gitvis-mermaid-branch-0)); }
++    50%  { filter: drop-shadow(0 0 8px var(--gitvis-mermaid-branch-0)); }
++    100% { filter: drop-shadow(0 0 4px var(--gitvis-mermaid-branch-0)); }
++}
++
++.commit-highlight {
++    animation: gitvis-commit-glow 1.5s ease-in-out infinite;
++}
+diff --git a/src/GitVisualizer/Interop/GitJsInterop.cs b/src/GitVisualizer/Interop/GitJsInterop.cs
+index ac6e952..1f2e1e0 100644
+--- a/src/GitVisualizer/Interop/GitJsInterop.cs
++++ b/src/GitVisualizer/Interop/GitJsInterop.cs
+@@ -40,6 +40,9 @@ public sealed class GitJsInterop : IAsyncDisposable, IDisposable
+     public async ValueTask<JsonElement> GitLogAsync(int depth = 20)
+         => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitLog", depth);
+ 
++    public async ValueTask<JsonElement> GitGetGraphAsync()
++        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitGetGraph");
++
+     public void Dispose()
+     {
+         // IAsyncDisposable only ΓÇö sync Dispose() is a no-op to avoid WASM deadlock
+diff --git a/src/GitVisualizer/Models/RepoState.cs b/src/GitVisualizer/Models/RepoState.cs
+index 198d908..cea3de7 100644
+--- a/src/GitVisualizer/Models/RepoState.cs
++++ b/src/GitVisualizer/Models/RepoState.cs
+@@ -5,5 +5,6 @@ public record RepoState(
+     bool IsInitialized,
+     string? CurrentBranch,
+     IReadOnlyList<string> StagedFiles,
+-    IReadOnlyList<string> UntrackedFiles
++    IReadOnlyList<string> UntrackedFiles,
++    CommitGraph? Graph = null
+ );
+diff --git a/src/GitVisualizer/Program.cs b/src/GitVisualizer/Program.cs
+index ffa96eb..a6bddfa 100644
+--- a/src/GitVisualizer/Program.cs
++++ b/src/GitVisualizer/Program.cs
+@@ -24,6 +24,7 @@ builder.Services.AddSingleton<IGitSimulatorService, GitSimulatorService>();
+ 
+ // Future singletons ΓÇö added in Stories 2.3ΓÇô2.5:
+ builder.Services.AddSingleton<ICommandParserService, CommandParserService>();
+-// builder.Services.AddSingleton<IGraphRenderService, GraphRenderService>();
++builder.Services.AddSingleton<IGraphRenderService, GraphRenderService>();
++builder.Services.AddSingleton<MermaidJsInterop>();
+ 
+ await builder.Build().RunAsync();
+diff --git a/src/GitVisualizer/Services/GitSimulatorService.cs b/src/GitVisualizer/Services/GitSimulatorService.cs
+index 43996f4..e51b265 100644
+--- a/src/GitVisualizer/Services/GitSimulatorService.cs
++++ b/src/GitVisualizer/Services/GitSimulatorService.cs
+@@ -21,6 +21,7 @@ public sealed class GitSimulatorService : IGitSimulatorService
+ 
+     public bool IsProcessing => _isProcessing;
+     public IReadOnlyList<CommandHistoryEntry> CommandHistory => _history;
++    public RepoState? CurrentState => _currentState;
+     public event Action? StateChanged;
+ 
+     public async Task<CommandResult> ExecuteCommandAsync(string rawCommand)
+@@ -40,6 +41,7 @@ public sealed class GitSimulatorService : IGitSimulatorService
+         finally
+         {
+             _isProcessing = false;
++            await TryUpdateGraphAsync();
+             StateChanged?.Invoke();
+         }
+         return result;
+@@ -232,6 +234,21 @@ public sealed class GitSimulatorService : IGitSimulatorService
+         return new CommandResult(true, output, null, null, _currentState);
+     }
+ 
++    private async Task TryUpdateGraphAsync()
++    {
++        if (_currentState?.IsInitialized != true) return;
++        try
++        {
++            var json = await _gitJs.GitGetGraphAsync();
++            var graph = CommitGraph.FromJson(json);
++            _currentState = _currentState with { Graph = graph };
++        }
++        catch
++        {
++            // Graph is best-effort ΓÇö swallow all exceptions
++        }
++    }
++
+     private const string HelpText =
+         """
+         Available git commands:
+diff --git a/src/GitVisualizer/Services/IGitSimulatorService.cs b/src/GitVisualizer/Services/IGitSimulatorService.cs
+index 20042c8..1a266f8 100644
+--- a/src/GitVisualizer/Services/IGitSimulatorService.cs
++++ b/src/GitVisualizer/Services/IGitSimulatorService.cs
+@@ -7,6 +7,7 @@ public interface IGitSimulatorService
+ {
+     bool IsProcessing { get; }
+     IReadOnlyList<CommandHistoryEntry> CommandHistory { get; }
++    RepoState? CurrentState { get; }
+     event Action? StateChanged;
+ 
+     /// <summary>Execute a raw git command string (e.g. "git init") and append to history.</summary>
+diff --git a/src/GitVisualizer/wwwroot/package.json b/src/GitVisualizer/wwwroot/package.json
+index 729f653..6f07683 100644
+--- a/src/GitVisualizer/wwwroot/package.json
++++ b/src/GitVisualizer/wwwroot/package.json
+@@ -8,7 +8,7 @@
+   },
+   "scripts": {
+     "test": "echo \"Error: no test specified\" && exit 1",
+-    "build": "npx esbuild js/git-interop.src.js --bundle --format=esm --platform=browser --outfile=js/git-interop.js"
++    "build": "npx esbuild js/git-interop.src.js --bundle --format=esm --platform=browser --outfile=js/git-interop.js && npx esbuild js/mermaid-interop.src.js --bundle --format=esm --platform=browser --outfile=js/mermaid-interop.js"
+   },
+   "keywords": [],
+   "author": "",
+diff --git a/tests/GitVisualizer.Tests/Components/AppShellTests.cs b/tests/GitVisualizer.Tests/Components/AppShellTests.cs
+index 25bf6b8..84f1387 100644
+--- a/tests/GitVisualizer.Tests/Components/AppShellTests.cs
++++ b/tests/GitVisualizer.Tests/Components/AppShellTests.cs
+@@ -15,6 +15,8 @@ namespace GitVisualizer.Tests.Components;
+ /// <summary>Tests for CommitGraphPanel and SplitPane (no popover needed)</summary>
+ public class AppShellTests : BunitContext
+ {
++    private readonly FakeGitSimulatorService _fakeGitService = new();
++
+     public AppShellTests()
+     {
+         JSInterop.Mode = JSRuntimeMode.Loose;
+@@ -22,20 +24,24 @@ public class AppShellTests : BunitContext
+         Services.AddSingleton<IThemeService>(new FakeThemeService());
+         Services.AddSingleton<ILocalStorageService>(new FakeLocalStorageService());
+         Services.AddSingleton<SplitPaneJsInterop>();
++        Services.AddSingleton<IGitSimulatorService>(_fakeGitService);
++        Services.AddSingleton<IGraphRenderService>(new FakeGraphRenderService());
++        Services.AddSingleton<MermaidJsInterop>();
+     }
+ 
+     [Fact]
+-    public void CommitGraphPanel_BeforeAnyCommands_ShowsEmptyStateHint()
++    public void CommitGraphPanel_NoRepoInitialized_ShowsEmptyStateHint()
+     {
++        _fakeGitService.CurrentState = null;
+         var cut = Render<CommitGraphPanel>();
+-        Assert.Contains("Your repository will appear here", cut.Markup);
++        Assert.Contains("git init", cut.Markup);
+     }
+ 
+     [Fact]
+-    public void CommitGraphPanel_WithCommands_DoesNotShowEmptyState()
++    public void CommitGraphPanel_WithInitializedRepo_ShowsMermaidContainer()
+     {
+-        var cut = Render<CommitGraphPanel>(p => p.Add(c => c.HasCommands, true));
+-        Assert.DoesNotContain("Your repository will appear here", cut.Markup);
++        _fakeGitService.CurrentState = new GitVisualizer.Models.RepoState(true, "main", [], []);
++        var cut = Render<CommitGraphPanel>();
+         Assert.Contains("mermaid-graph", cut.Markup);
+     }
+ 
+diff --git a/tests/GitVisualizer.Tests/Fakes/FakeGitSimulatorService.cs b/tests/GitVisualizer.Tests/Fakes/FakeGitSimulatorService.cs
+index fce4b56..f65d4e2 100644
+--- a/tests/GitVisualizer.Tests/Fakes/FakeGitSimulatorService.cs
++++ b/tests/GitVisualizer.Tests/Fakes/FakeGitSimulatorService.cs
+@@ -10,6 +10,7 @@ internal sealed class FakeGitSimulatorService : IGitSimulatorService
+ 
+     public bool IsProcessing { get; set; }
+     public IReadOnlyList<CommandHistoryEntry> CommandHistory => _history;
++    public RepoState? CurrentState { get; set; }
+     public event Action? StateChanged;
+ 
+     public List<string> ExecutedCommands { get; } = new();
+@@ -65,4 +66,6 @@ internal sealed class FakeGitSimulatorService : IGitSimulatorService
+ 
+     public void AddHistoryEntry(string command, CommandResult result)
+         => _history.Add(new CommandHistoryEntry(command, result, DateTime.UtcNow));
++
++    public void RaiseStateChanged() => StateChanged?.Invoke();
+ }
+

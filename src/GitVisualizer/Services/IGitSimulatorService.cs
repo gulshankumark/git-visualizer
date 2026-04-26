@@ -7,7 +7,16 @@ public interface IGitSimulatorService
 {
     bool IsProcessing { get; }
     IReadOnlyList<CommandHistoryEntry> CommandHistory { get; }
+    RepoState? CurrentState { get; }
+    bool SessionRestored { get; }
+    bool SchemaMismatch { get; }
     event Action? StateChanged;
+
+    /// <summary>Initialize session storage. Call once on app startup to restore previous state.</summary>
+    Task InitializeAsync();
+
+    /// <summary>Mark that schema mismatch was detected (version upgrade).</summary>
+    Task SetSchemaMismatchFlagAsync();
 
     /// <summary>Execute a raw git command string (e.g. "git init") and append to history.</summary>
     Task<CommandResult> ExecuteCommandAsync(string rawCommand);

@@ -40,6 +40,9 @@ public sealed class GitJsInterop : IAsyncDisposable, IDisposable
     public async ValueTask<JsonElement> GitLogAsync(int depth = 20)
         => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitLog", depth);
 
+    public async ValueTask<JsonElement> GitGetGraphAsync()
+        => await (await GetModuleAsync()).InvokeAsync<JsonElement>("gitGetGraph");
+
     public void Dispose()
     {
         // IAsyncDisposable only — sync Dispose() is a no-op to avoid WASM deadlock

@@ -65,6 +65,9 @@
 </div>
 
 @code {
+    [Parameter]
+    public EventCallback OnHelpRequested { get; set; }
+
     private ElementReference _inputRef;
     private string _inputText = string.Empty;
     private string _savedInput = string.Empty;
@@ -127,6 +130,16 @@
         {
             _inputText = string.Empty;
             await GitService.ClearAsync();
+            return;
+        }
+
+        // Handle git help command
+        if (command.Equals("git help", StringComparison.OrdinalIgnoreCase))
+        {
+            _inputText = string.Empty;
+            await OnHelpRequested.InvokeAsync();
+            try { await _inputRef.FocusAsync(); }
+            catch (JSException) { }
             return;
         }
 

@@ -10,11 +10,22 @@ internal sealed class FakeGitSimulatorService : IGitSimulatorService
 
     public bool IsProcessing { get; set; }
     public IReadOnlyList<CommandHistoryEntry> CommandHistory => _history;
+    public RepoState? CurrentState { get; set; }
+    public bool SessionRestored { get; set; }
+    public bool SchemaMismatch { get; set; }
     public event Action? StateChanged;
 
     public List<string> ExecutedCommands { get; } = new();
     public int ClearCount  { get; private set; }
     public int ResetCount  { get; private set; }
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public Task SetSchemaMismatchFlagAsync()
+    {
+        SchemaMismatch = true;
+        return Task.CompletedTask;
+    }
 
     public Task<CommandResult> ExecuteCommandAsync(string rawCommand)
     {
@@ -65,4 +76,6 @@ internal sealed class FakeGitSimulatorService : IGitSimulatorService
 
     public void AddHistoryEntry(string command, CommandResult result)
         => _history.Add(new CommandHistoryEntry(command, result, DateTime.UtcNow));
+
+    public void RaiseStateChanged() => StateChanged?.Invoke();
 }

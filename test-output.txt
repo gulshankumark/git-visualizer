@@ -1,0 +1,33 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  GitVisualizer -> D:\WS\gulshankumark\git-visualizer\src\GitVisualizer\bin\Debug\net10.0\GitVisualizer.dll
+  GitVisualizer (Blazor output) -> D:\WS\gulshankumark\git-visualizer\src\GitVisualizer\bin\Debug\net10.0\wwwroot
+  
+  > wwwroot@1.0.0 build
+  > npx esbuild js/git-interop.src.js --bundle --format=esm --platform=browser --outfile=js/git-interop.js && npx esbuild js/mermaid-interop.src.js --bundle --format=esm --platform=browser --outfile=js/mermaid-interop.js
+  
+  
+    js\git-interop.js  639.5kb
+  
+  ╬ô├£├¡ Done in 26ms
+  
+    js\mermaid-interop.js  6.3mb ╬ô├£├íΓê⌐Γòò├à
+  
+  ╬ô├£├¡ Done in 120ms
+  GitVisualizer.Tests -> D:\WS\gulshankumark\git-visualizer\tests\GitVisualizer.Tests\bin\Debug\net10.0\GitVisualizer.Tests.dll
+Test run for D:\WS\gulshankumark\git-visualizer\tests\GitVisualizer.Tests\bin\Debug\net10.0\GitVisualizer.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.15]     GitVisualizer.Tests.Services.SessionStorageServiceTests.CommitGraphSerializationRoundTrip_WithMultipleCommits_PreservesAllData [FAIL]
+  Failed GitVisualizer.Tests.Services.SessionStorageServiceTests.CommitGraphSerializationRoundTrip_WithMultipleCommits_PreservesAllData [1 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           Γåô (pos 0)
+Expected: "aaa"
+Actual:   "main"
+           Γåæ (pos 0)
+  Stack Trace:
+     at GitVisualizer.Tests.Services.SessionStorageServiceTests.CommitGraphSerializationRoundTrip_WithMultipleCommits_PreservesAllData() in D:\WS\gulshankumark\git-visualizer\tests\GitVisualizer.Tests\Services\SessionStorageServiceTests.cs:line 112
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     1, Passed:    69, Skipped:     0, Total:    70, Duration: 412 ms - GitVisualizer.Tests.dll (net10.0)

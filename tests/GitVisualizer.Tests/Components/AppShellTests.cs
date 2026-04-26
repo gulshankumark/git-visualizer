@@ -6,6 +6,7 @@ using GitVisualizer.Interop;
 using GitVisualizer.Services;
 using GitVisualizer.Tests.Fakes;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using MudBlazor.Services;
@@ -15,6 +16,8 @@ namespace GitVisualizer.Tests.Components;
 /// <summary>Tests for CommitGraphPanel and SplitPane (no popover needed)</summary>
 public class AppShellTests : BunitContext
 {
+    private readonly FakeGitSimulatorService _fakeGitService = new();
+
     public AppShellTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
@@ -22,20 +25,24 @@ public class AppShellTests : BunitContext
         Services.AddSingleton<IThemeService>(new FakeThemeService());
         Services.AddSingleton<ILocalStorageService>(new FakeLocalStorageService());
         Services.AddSingleton<SplitPaneJsInterop>();
+        Services.AddSingleton<IGitSimulatorService>(_fakeGitService);
+        Services.AddSingleton<IGraphRenderService>(new FakeGraphRenderService());
+        Services.AddSingleton<MermaidJsInterop>();
     }
 
     [Fact]
-    public void CommitGraphPanel_BeforeAnyCommands_ShowsEmptyStateHint()
+    public void CommitGraphPanel_NoRepoInitialized_ShowsEmptyStateHint()
     {
+        _fakeGitService.CurrentState = null;
         var cut = Render<CommitGraphPanel>();
-        Assert.Contains("Your repository will appear here", cut.Markup);
+        Assert.Contains("git init", cut.Markup);
     }
 
     [Fact]
-    public void CommitGraphPanel_WithCommands_DoesNotShowEmptyState()
+    public void CommitGraphPanel_WithInitializedRepo_ShowsMermaidContainer()
     {
-        var cut = Render<CommitGraphPanel>(p => p.Add(c => c.HasCommands, true));
-        Assert.DoesNotContain("Your repository will appear here", cut.Markup);
+        _fakeGitService.CurrentState = new GitVisualizer.Models.RepoState(true, "main", [], []);
+        var cut = Render<CommitGraphPanel>();
         Assert.Contains("mermaid-graph", cut.Markup);
     }
 

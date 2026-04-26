@@ -25,7 +25,10 @@ public class GitSimulatorServiceTests : TestContext
             .Setup<JsonElement>("gitInit")
             .SetResult(JsonDocument.Parse("""{"success":true,"message":"Initialized empty Git repository in /"}""").RootElement);
 
-        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime), new FakeCommandParserService());
+        var sut = new GitSimulatorService(
+            new GitJsInterop(JSInterop.JSRuntime),
+            new FakeCommandParserService(),
+            new FakeSessionStorageService());
 
         var result = await sut.InitRepoAsync();
 
@@ -42,8 +45,14 @@ public class GitSimulatorServiceTests : TestContext
         moduleInterop
             .Setup<JsonElement>("gitInit")
             .SetResult(JsonDocument.Parse("""{"success":true,"message":"Initialized."}""").RootElement);
+        moduleInterop
+            .Setup<JsonElement>("gitGetGraph")
+            .SetResult(JsonDocument.Parse("""{"success":true,"branches":[],"headBranch":"main","commits":[],"branchTips":{}}""").RootElement);
 
-        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime), new FakeCommandParserService());
+        var sut = new GitSimulatorService(
+            new GitJsInterop(JSInterop.JSRuntime),
+            new FakeCommandParserService(),
+            new FakeSessionStorageService());
 
         var result = await sut.ExecuteCommandAsync("git init");
 
@@ -54,7 +63,10 @@ public class GitSimulatorServiceTests : TestContext
     [Fact]
     public async Task ExecuteCommandAsync_UnknownCommand_ReturnsFriendlyErrorWithSuggestedFix()
     {
-        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime), new FakeCommandParserService());
+        var sut = new GitSimulatorService(
+            new GitJsInterop(JSInterop.JSRuntime),
+            new FakeCommandParserService(),
+            new FakeSessionStorageService());
 
         var result = await sut.ExecuteCommandAsync("npm install");
 
@@ -67,7 +79,10 @@ public class GitSimulatorServiceTests : TestContext
     [Fact]
     public async Task ExecuteCommandAsync_TypoGitSubcommand_ReturnsSuggestion()
     {
-        var sut = new GitSimulatorService(new GitJsInterop(JSInterop.JSRuntime), new CommandParserService());
+        var sut = new GitSimulatorService(
+            new GitJsInterop(JSInterop.JSRuntime),
+            new CommandParserService(),
+            new FakeSessionStorageService());
 
         var result = await sut.ExecuteCommandAsync("git comit");
 

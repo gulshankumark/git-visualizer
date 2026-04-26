@@ -1,20 +1,128 @@
+@implements IAsyncDisposable
+@inject IGitSimulatorService GitService
+@inject IGraphRenderService GraphRender
+@inject MermaidJsInterop MermaidInterop
+@inject IThemeService ThemeService
+
 <div class="commit-graph-panel"
      role="img"
-     aria-label="@(HasCommands ? "Git repository commit graph" : "Git repository graph — no commits yet")">
-    @if (!HasCommands)
+     aria-label="@_ariaLabel"
+     tabindex="0">
+    @if (_showEmptyState)
     {
         <div class="empty-state">
             <div class="empty-state-border">
-                <MudText>Your repository will appear here</MudText>
+                <MudText>Initialise a repo with <code>git init</code> to see the commit graph.</MudText>
             </div>
         </div>
     }
     else
     {
-        <div id="mermaid-graph"></div>
+        <div class="mermaid-container">
+            <div id="mermaid-graph"></div>
+        </div>
     }
 </div>
 
 @code {
-    [Parameter] public bool HasCommands { get; set; } = false;
+    private const string ContainerId = "mermaid-graph";
+
+    private string _ariaLabel = "Commit graph: no repository initialised.";
+    private bool _showEmptyState = true;
+    private CancellationTokenSource? _debounce;
+    private bool _subscribed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        if (!_subscribed)
+        {
+            GitService.StateChanged   += HandleStateChanged;
+            ThemeService.ThemeChanged += HandleThemeChanged;
+            _subscribed = true;
+        }
+
+        await MermaidInterop.InitAsync(ThemeService.IsDarkMode);
+        await RenderCurrentGraphAsync();
+    }
+
+    private async void HandleStateChanged() => await ScheduleRenderAsync();
+
+    private async void HandleThemeChanged()
+    {
+        try
+        {
+            await MermaidInterop.InitAsync(ThemeService.IsDarkMode);
+            await ScheduleRenderAsync();
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or TaskCanceledException) { }
+    }
+
+    private async Task ScheduleRenderAsync()
+    {
+        lock (_debounce ?? new object())
+        {
+            _debounce?.Cancel();
+            _debounce?.Dispose();
+            _debounce = new CancellationTokenSource();
+        }
+
+        var token = _debounce.Token;
+        try
+        {
+            await Task.Delay(50, token);
+            try
+            {
+                await InvokeAsync(RenderCurrentGraphAsync);
+            }
+            catch (Exception) when (!token.IsCancellationRequested)
+            {
+                throw;
+            }
+        }
+        catch (TaskCanceledException) { /* debounced away */ }
+        catch
+        {
+            // Ensure debounce is disposed if InvokeAsync throws non-cancellation exceptions
+            lock (_debounce ?? new object())
+            {
+                _debounce?.Dispose();
+                _debounce = null;
+            }
+            throw;
+        }
+    }
+
+    private async Task RenderCurrentGraphAsync()
+    {
+        // Capture state once to avoid race with StateChanged event
+        var state = GitService.CurrentState;
+        _showEmptyState = state?.IsInitialized != true;
+        _ariaLabel = GraphRender.BuildAriaLabel(state);
+        StateHasChanged();
+
+        if (!_showEmptyState && state is not null)
+        {
+            var syntax = GraphRender.ToMermaidSyntax(state);
+            if (!string.IsNullOrEmpty(syntax))
+            {
+                try
+                {
+                    await MermaidInterop.RenderGraphAsync(ContainerId, syntax);
+                    await MermaidInterop.ScrollToHeadAsync(ContainerId);
+                }
+                catch (Exception ex) when (ex is JSException or TaskCanceledException) { }
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        GitService.StateChanged   -= HandleStateChanged;
+        ThemeService.ThemeChanged -= HandleThemeChanged;
+        _debounce?.Cancel();
+        _debounce?.Dispose();
+        await MermaidInterop.DisposeAsync();
+    }
 }

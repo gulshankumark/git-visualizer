@@ -20,10 +20,12 @@ builder.Services.AddSingleton<IThemeService, ThemeService>();
 builder.Services.AddSingleton<SplitPaneJsInterop>();
 
 builder.Services.AddSingleton<GitJsInterop>();
+builder.Services.AddSingleton<ISessionStorageService, SessionStorageService>();
 builder.Services.AddSingleton<IGitSimulatorService, GitSimulatorService>();
 
 // Future singletons — added in Stories 2.3–2.5:
 builder.Services.AddSingleton<ICommandParserService, CommandParserService>();
-// builder.Services.AddSingleton<IGraphRenderService, GraphRenderService>();
+builder.Services.AddSingleton<IGraphRenderService, GraphRenderService>();
+builder.Services.AddSingleton<MermaidJsInterop>();
 
 await builder.Build().RunAsync();

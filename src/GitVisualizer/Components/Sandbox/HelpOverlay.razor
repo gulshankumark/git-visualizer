@@ -1,0 +1,73 @@
+@* src/GitVisualizer/Components/Sandbox/HelpOverlay.razor *@
+
+<MudDialog @bind-IsOpen="_isOpen"
+           Options="@DialogOptions"
+           aria-label="Git commands help overlay">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4" id="help-title">Available Commands</MudText>
+        
+        <div class="help-overlay-content" role="region" aria-labelledby="help-title">
+            <div class="help-command-group" role="list">
+                <div class="help-command" role="listitem">
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">git init</MudText>
+                    <MudText Typo="Typo.body2">Initialize a new repository and create an initial commit.</MudText>
+                </div>
+                
+                <div class="help-command" role="listitem">
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">git add</MudText>
+                    <MudText Typo="Typo.body2">Stage changes for the next commit.</MudText>
+                </div>
+                
+                <div class="help-command" role="listitem">
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">git commit</MudText>
+                    <MudText Typo="Typo.body2">Create a new commit with staged changes. Use: <code>git commit -m "message"</code></MudText>
+                </div>
+                
+                <div class="help-command" role="listitem">
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">git log</MudText>
+                    <MudText Typo="Typo.body2">View commit history. Shows all commits in the current branch in reverse chronological order.</MudText>
+                </div>
+                
+                <div class="help-command" role="listitem">
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">git checkout</MudText>
+                    <MudText Typo="Typo.body2">Switch to a branch or commit. Use: <code>git checkout [branch]</code></MudText>
+                </div>
+                
+                <div class="help-command" role="listitem">
+                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">git reset</MudText>
+                    <MudText Typo="Typo.body2">Undo commits or unstage changes. Use: <code>git reset HEAD~1</code> to undo the last commit.</MudText>
+                </div>
+            </div>
+        </div>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool _isOpen;
+
+    private DialogOptions DialogOptions = new()
+    {
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small,
+        CloseButton = true
+    };
+
+    public void Open()
+    {
+        _isOpen = true;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        _isOpen = false;
+        StateHasChanged();
+    }
+
+    public bool IsOpen
+        => _isOpen;
+}

@@ -4,9 +4,81 @@
 
 <SplitPane>
     <LeftContent>
-        <TerminalPanel />
+        <TerminalPanel @ref="_terminalPanel" OnHelpRequested="ShowHelp" />
     </LeftContent>
     <RightContent>
         <CommitGraphPanel />
     </RightContent>
 </SplitPane>
+
+<HelpOverlay @ref="_helpOverlay" />
+
+<!-- Session restore toast -->
+<MudSnackbarProvider />
+
+<!-- Schema mismatch alert -->
+@if (_showSchemaMismatchAlert)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="fixed-alert">
+        Your previous session was from an older version and could not be restored.
+        <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small" 
+                   OnClick="@(() => _showSchemaMismatchAlert = false)">
+            Dismiss
+        </MudButton>
+    </MudAlert>
+}
+
+@code {
+    [Inject]
+    private IGitSimulatorService GitSimulator { get; set; } = null!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = null!;
+
+    private TerminalPanel? _terminalPanel;
+    private HelpOverlay? _helpOverlay;
+    private bool _showSchemaMismatchAlert;
+    private bool _alertsShown;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initialize session storage
+            await GitSimulator.InitializeAsync();
+
+            // Show restore toast if session was restored
+            if (GitSimulator.SessionRestored && !_alertsShown)
+            {
+                Snackbar.Add("Session restored ✓", Severity.Success, config =>
+                {
+                    config.VisibleStateDuration = 2000;
+                    config.HideTransitionDuration = 300;
+                });
+                _alertsShown = true;
+                StateHasChanged();
+            }
+
+            // Show schema mismatch alert if version changed
+            if (GitSimulator.SchemaMismatch && !_showSchemaMismatchAlert)
+            {
+                _showSchemaMismatchAlert = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void ShowHelp()
+        => _helpOverlay?.Open();
+}
+
+<style>
+.fixed-alert {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    max-width: 90vw;
+}
+</style>

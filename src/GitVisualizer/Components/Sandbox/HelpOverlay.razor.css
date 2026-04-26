@@ -1,0 +1,41 @@
+/* src/GitVisualizer/Components/Sandbox/HelpOverlay.razor.css */
+
+.help-overlay-content {
+    padding: 16px 0;
+}
+
+.help-command-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.help-command {
+    padding: 12px;
+    border-left: 3px solid var(--gitvis-primary, #1976d2);
+    background-color: var(--mud-palette-background-grey, #fafafa);
+    border-radius: 4px;
+}
+
+.help-command code {
+    background-color: var(--mud-palette-background, #fff);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.help-command :deep(.mud-typography) {
+    margin-bottom: 4px;
+}
+
+.help-command :deep(.mud-typography:last-child) {
+    margin-bottom: 0;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    .help-command {
+        transition: none;
+    }
+}

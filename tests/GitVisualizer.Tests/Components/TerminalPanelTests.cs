@@ -255,4 +255,47 @@ public class TerminalPanelTests : BunitContext
         // No history → input unchanged
         Assert.Contains("hello", cut.Find("textarea").OuterHtml);
     }
+
+    // ── Help Overlay Tests ────────────────────────────────────────────────────
+
+    [Fact]
+    public void TerminalPanel_GitHelpCommand_InvokesOnHelpRequestedCallback()
+    {
+        var helpRequested = false;
+        var cut = Render<TerminalPanel>(p =>
+            p.Add(c => c.OnHelpRequested, EventCallback.Factory.Create(this, async () =>
+            {
+                helpRequested = true;
+                await Task.CompletedTask;
+            }))
+        );
+
+        var textarea = cut.Find("textarea");
+        textarea.TriggerEvent("oninput", new ChangeEventArgs { Value = "git help" });
+        textarea.TriggerEvent("onkeydown", new KeyboardEventArgs { Key = "Enter" });
+
+        Assert.True(helpRequested);
+    }
+
+    [Fact]
+    public void TerminalPanel_GitHelpCommand_DoesNotExecuteAsRegularCommand()
+    {
+        var cut = Render<TerminalPanel>();
+        var textarea = cut.Find("textarea");
+        textarea.TriggerEvent("oninput", new ChangeEventArgs { Value = "git help" });
+        textarea.TriggerEvent("onkeydown", new KeyboardEventArgs { Key = "Enter" });
+
+        Assert.Empty(_git.ExecutedCommands); // 'git help' NOT forwarded to service
+    }
+
+    [Fact]
+    public void TerminalPanel_GitHelpCommand_ClearsInput()
+    {
+        var cut = Render<TerminalPanel>();
+        var textarea = cut.Find("textarea");
+        textarea.TriggerEvent("oninput", new ChangeEventArgs { Value = "git help" });
+        textarea.TriggerEvent("onkeydown", new KeyboardEventArgs { Key = "Enter" });
+
+        Assert.DoesNotContain("git help", cut.Find("textarea").GetAttribute("value") ?? "");
+    }
 }

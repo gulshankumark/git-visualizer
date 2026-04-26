@@ -5,5 +5,6 @@ public record RepoState(
     bool IsInitialized,
     string? CurrentBranch,
     IReadOnlyList<string> StagedFiles,
-    IReadOnlyList<string> UntrackedFiles
+    IReadOnlyList<string> UntrackedFiles,
+    CommitGraph? Graph = null
 );

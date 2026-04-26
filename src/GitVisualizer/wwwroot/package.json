@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx esbuild js/git-interop.src.js --bundle --format=esm --platform=browser --outfile=js/git-interop.js"
+    "build": "npx esbuild js/git-interop.src.js --bundle --format=esm --platform=browser --outfile=js/git-interop.js && npx esbuild js/mermaid-interop.src.js --bundle --format=esm --platform=browser --outfile=js/mermaid-interop.js"
   },
   "keywords": [],
   "author": "",

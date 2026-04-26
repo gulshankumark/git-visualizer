@@ -21474,12 +21474,14 @@ var import_lightning_fs = __toESM(require_src());
 var fs = new import_lightning_fs.default("gitfs");
 var dir = "/";
 var author = { name: "Learner", email: "learner@git-visualizer" };
+var _repoInitialized = false;
 async function gitInit() {
   try {
     await isomorphic_git_default.init({ fs, dir });
     await isomorphic_git_default.setConfig({ fs, dir, path: "user.name", value: "Learner" });
     await isomorphic_git_default.setConfig({ fs, dir, path: "user.email", value: "learner@git-visualizer" });
     await fs.promises.writeFile("/README.md", "# My Git Repository\n", { encoding: "utf8" });
+    _repoInitialized = true;
     return { success: true, message: "Initialized empty Git repository in /" };
   } catch (e) {
     throw new Error(`git init failed: ${e.message}`);
@@ -21554,11 +21556,49 @@ Date:   ${date}
     throw new Error(`git log failed: ${e.message}`);
   }
 }
+async function gitGetGraph() {
+  if (!_repoInitialized) {
+    return { success: true, branches: [], headBranch: "main", commits: [], branchTips: {} };
+  }
+  try {
+    const branches = await isomorphic_git_default.listBranches({ fs, dir });
+    const headBranch = await isomorphic_git_default.currentBranch({ fs, dir }) ?? "main";
+    const seen = /* @__PURE__ */ new Map();
+    const branchTips = {};
+    for (const branch2 of branches) {
+      let log2;
+      try {
+        log2 = await isomorphic_git_default.log({ fs, dir, ref: branch2, depth: 50 });
+      } catch {
+        log2 = [];
+      }
+      if (log2.length > 0) branchTips[branch2] = log2[0].oid;
+      for (const entry of log2) {
+        if (!seen.has(entry.oid)) {
+          seen.set(entry.oid, {
+            oid: entry.oid,
+            shortOid: entry.oid.slice(0, 7),
+            message: entry.commit.message.split("\n")[0].trim(),
+            author: entry.commit.author.name,
+            timestamp: entry.commit.author.timestamp,
+            parents: entry.commit.parent ?? [],
+            branch: branch2
+          });
+        }
+      }
+    }
+    const commits = [...seen.values()].sort((a, b) => a.timestamp - b.timestamp);
+    return { success: true, branches, headBranch, commits, branchTips };
+  } catch (e) {
+    return { success: false, error: e.message, branches: [], headBranch: "main", commits: [], branchTips: {} };
+  }
+}
 export {
   gitAdd,
   gitBranch,
   gitCheckout,
   gitCommit,
+  gitGetGraph,
   gitInit,
   gitLog,
   gitMerge

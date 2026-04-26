@@ -24,3 +24,22 @@
     max-width:     400px;
     text-align:    center;
 }
+
+/* ─── Mermaid graph container layout ─── */
+.mermaid-container {
+    width:    100%;
+    height:   100%;
+    overflow: auto;
+    outline:  none;
+}
+
+/* ─── HEAD commit glow (suppressed by app.css reduced-motion rule) ─── */
+@keyframes gitvis-commit-glow {
+    0%   { filter: drop-shadow(0 0 4px var(--gitvis-mermaid-branch-0)); }
+    50%  { filter: drop-shadow(0 0 8px var(--gitvis-mermaid-branch-0)); }
+    100% { filter: drop-shadow(0 0 4px var(--gitvis-mermaid-branch-0)); }
+}
+
+.commit-highlight {
+    animation: gitvis-commit-glow 1.5s ease-in-out infinite;
+}

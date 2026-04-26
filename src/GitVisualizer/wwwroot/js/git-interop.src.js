@@ -9,12 +9,15 @@ const fs = new LightningFS('gitfs');
 const dir = '/';
 const author = { name: 'Learner', email: 'learner@git-visualizer' };
 
+let _repoInitialized = false;
+
 export async function gitInit() {
   try {
     await git.init({ fs, dir });
     await git.setConfig({ fs, dir, path: 'user.name', value: 'Learner' });
     await git.setConfig({ fs, dir, path: 'user.email', value: 'learner@git-visualizer' });
     await fs.promises.writeFile('/README.md', '# My Git Repository\n', { encoding: 'utf8' });
+    _repoInitialized = true;
     return { success: true, message: 'Initialized empty Git repository in /' };
   } catch (e) {
     throw new Error(`git init failed: ${e.message}`);
@@ -91,5 +94,47 @@ export async function gitLog(depth = 20) {
     return { success: true, message: lines.join('\n\n') || '(no commits yet)', commits };
   } catch (e) {
     throw new Error(`git log failed: ${e.message}`);
+  }
+}
+
+export async function gitGetGraph() {
+  if (!_repoInitialized) {
+    return { success: true, branches: [], headBranch: 'main', commits: [], branchTips: {} };
+  }
+  try {
+    const branches = await git.listBranches({ fs, dir });
+    const headBranch = (await git.currentBranch({ fs, dir })) ?? 'main';
+
+    const seen = new Map();
+    const branchTips = {};
+
+    for (const branch of branches) {
+      let log;
+      try {
+        log = await git.log({ fs, dir, ref: branch, depth: 50 });
+      } catch {
+        log = [];
+      }
+      if (log.length > 0) branchTips[branch] = log[0].oid;
+      for (const entry of log) {
+        if (!seen.has(entry.oid)) {
+          seen.set(entry.oid, {
+            oid: entry.oid,
+            shortOid: entry.oid.slice(0, 7),
+            message: entry.commit.message.split('\n')[0].trim(),
+            author: entry.commit.author.name,
+            timestamp: entry.commit.author.timestamp,
+            parents: entry.commit.parent ?? [],
+            branch
+          });
+        }
+      }
+    }
+
+    const commits = [...seen.values()].sort((a, b) => a.timestamp - b.timestamp);
+
+    return { success: true, branches, headBranch, commits, branchTips };
+  } catch (e) {
+    return { success: false, error: e.message, branches: [], headBranch: 'main', commits: [], branchTips: {} };
   }
 }
