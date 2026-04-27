@@ -192,7 +192,7 @@ public class GraphRenderServiceTests
     {
         var state = new RepoState(true, "main", [], [], CommitGraph.Empty);
         var label = _sut.BuildAriaLabel(state);
-        Assert.Contains("no commits", label, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("0 commits", label, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -205,10 +205,12 @@ public class GraphRenderServiceTests
     }
 
     [Fact]
-    public void BuildAriaLabel_MultipleBranches_IncludesBranchCount()
+    public void BuildAriaLabel_MultipleBranches_IncludesCommitCount()
     {
         var state = new RepoState(true, "main", [], [], TwoBranchMergeGraph());
         var label = _sut.BuildAriaLabel(state);
-        Assert.Contains("2", label);
+        // TwoBranchMergeGraph has 4 commits; label should reflect the total count
+        Assert.Contains("4", label);
+        Assert.Contains("main", label);
     }
 }

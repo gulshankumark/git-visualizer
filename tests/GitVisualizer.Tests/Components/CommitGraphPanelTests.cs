@@ -48,18 +48,18 @@ public class CommitGraphPanelTests : BunitContext
     public void CommitGraphPanel_WhenNotInitialized_HasDefaultAriaLabel()
     {
         _fakeGitService.CurrentState = null;
-        _fakeRenderService.AriaLabelToReturn = "Commit graph: no repository initialised.";
+        _fakeRenderService.AriaLabelToReturn = "Git graph: no repository initialised";
         var cut = Render<CommitGraphPanel>();
-        Assert.Contains("Commit graph:", cut.Markup);
+        Assert.Contains("Git graph:", cut.Markup);
     }
 
     [Fact]
     public void CommitGraphPanel_WhenInitialized_HasCustomAriaLabel()
     {
         _fakeGitService.CurrentState = new RepoState(true, "main", [], []);
-        _fakeRenderService.AriaLabelToReturn = "Commit graph: main branch, 2 commits.";
+        _fakeRenderService.AriaLabelToReturn = "Git graph: HEAD on main, 2 commits";
         var cut = Render<CommitGraphPanel>();
-        Assert.Contains("Commit graph: main branch, 2 commits.", cut.Markup);
+        Assert.Contains("Git graph: HEAD on main, 2 commits", cut.Markup);
     }
 
     [Fact]

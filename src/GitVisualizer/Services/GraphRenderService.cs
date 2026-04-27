@@ -48,16 +48,14 @@ public sealed class GraphRenderService : IGraphRenderService
     public string BuildAriaLabel(RepoState? state)
     {
         if (state is null || !state.IsInitialized)
-            return "Commit graph: no repository initialised.";
+            return "Git graph: no repository initialised";
 
         var graph = state.Graph;
         if (graph is null || graph.Commits.Count == 0)
-            return $"Commit graph: repository initialised on branch {state.CurrentBranch ?? "main"}, no commits yet.";
+            return $"Git graph: HEAD on {state.CurrentBranch ?? "main"}, 0 commits";
 
-        var branchCount = graph.BranchTips.Count;
         var commitCount = graph.Commits.Count;
-        var branchWord = branchCount == 1 ? "branch" : "branches";
-        return $"Commit graph: {state.CurrentBranch ?? graph.HeadBranch} branch, {commitCount} {(commitCount == 1 ? "commit" : "commits")}. {branchCount} {branchWord} total.";
+        return $"Git graph: HEAD on {state.CurrentBranch ?? graph.HeadBranch}, {commitCount} {(commitCount == 1 ? "commit" : "commits")}";
     }
 
     private static Dictionary<string, string> BuildCommitToBranch(CommitGraph graph)

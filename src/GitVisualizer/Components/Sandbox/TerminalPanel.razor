@@ -23,6 +23,7 @@
         <MudAlert Class="terminal-alert storage-alert"
                   Severity="Severity.Warning"
                   Dense="true"
+                  role="alert"
                   OnClose="() => StateHasChanged()">
             <div>
                 ⚠️ Storage at @($"{_storageStatus.UsagePercent:F0}%") — consider resetting the sandbox to free space
@@ -30,7 +31,7 @@
         </MudAlert>
     }
 
-    <div class="terminal-output" aria-live="polite">
+    <div class="terminal-output" role="log" aria-live="polite" aria-label="Terminal output">
         @foreach (var entry in GitService.CommandHistory)
         {
             <div class="terminal-entry">
@@ -43,7 +44,7 @@
                 }
                 else
                 {
-                    <MudAlert Class="terminal-alert" Severity="Severity.Warning" Dense="true">
+                    <MudAlert Class="terminal-alert" Severity="Severity.Warning" Dense="true" role="alert">
                         @entry.Result.ErrorMessage
                         @if (!string.IsNullOrEmpty(entry.Result.SuggestedFix))
                         {
