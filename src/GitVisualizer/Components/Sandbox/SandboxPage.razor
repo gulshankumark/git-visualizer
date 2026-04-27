@@ -1,15 +1,43 @@
 @page "/"
+@using GitVisualizer.Components.Mobile
+@using GitVisualizer.Interop
+@inject ViewportJsInterop ViewportJs
+@implements IAsyncDisposable
 
 <PageTitle>git-visualizer</PageTitle>
 
-<SplitPane>
-    <LeftContent>
-        <TerminalPanel @ref="_terminalPanel" OnHelpRequested="ShowHelp" />
-    </LeftContent>
-    <RightContent>
-        <CommitGraphPanel />
-    </RightContent>
-</SplitPane>
+@if (_isMobile)
+{
+    <div class="mobile-layout">
+        <div class="mobile-panel-content">
+            @if (_activeTab == "Terminal")
+            {
+                <div id="terminal-panel">
+                    <TerminalPanel @ref="_terminalPanel" OnHelpRequested="ShowHelp" />
+                </div>
+            }
+            else
+            {
+                <div id="graph-panel">
+                    <CommitGraphPanel />
+                </div>
+            }
+        </div>
+        <MobileTabBar ActiveTab="@_activeTab"
+                      OnTabChange="@(t => { _activeTab = t; StateHasChanged(); })" />
+    </div>
+}
+else
+{
+    <SplitPane>
+        <LeftContent>
+            <TerminalPanel @ref="_terminalPanel" OnHelpRequested="ShowHelp" />
+        </LeftContent>
+        <RightContent>
+            <CommitGraphPanel />
+        </RightContent>
+    </SplitPane>
+}
 
 <HelpOverlay @ref="_helpOverlay" />
 
@@ -40,9 +68,21 @@
     private bool _showSchemaMismatchAlert;
     private bool _alertsShown;
     private bool _initialized;
+    private bool _isMobile;
+    private string _activeTab = "Terminal";
+    private DotNetObjectReference<SandboxPage>? _dotnetRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Viewport detection — must happen before git init so layout is correct
+            _isMobile = await ViewportJs.IsMobileAsync();
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await ViewportJs.SubscribeAsync(_dotnetRef);
+            StateHasChanged();
+        }
+
         if (firstRender && !_initialized && GitSimulator != null && Snackbar != null)
         {
             _initialized = true;
@@ -82,8 +122,24 @@
         }
     }
 
+    /// <summary>Invoked by viewport-interop.js when the viewport crosses the 768px breakpoint.</summary>
+    [JSInvokable]
+    public void OnBreakpointChanged(bool isMobile)
+    {
+        _isMobile = isMobile;
+        if (!_isMobile) _activeTab = "Terminal"; // reset tab on expand back to desktop
+        InvokeAsync(StateHasChanged);
+    }
+
     private void ShowHelp()
         => _helpOverlay?.Open();
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await ViewportJs.UnsubscribeAsync(); }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException) { }
+        _dotnetRef?.Dispose();
+    }
 }
 
 <style>

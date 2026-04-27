@@ -28,10 +28,16 @@ public sealed class GraphRendererJsInterop : IAsyncDisposable, IDisposable
         await module.InvokeVoidAsync("renderGraph", containerId, payload);
     }
 
-    public async Task ScrollToHeadAsync(string containerId)
+    public async Task ScrollToHeadAsync(string containerId, bool reduceMotion = false)
     {
         var module = await GetModuleAsync();
-        await module.InvokeVoidAsync("scrollToHead", containerId);
+        await module.InvokeVoidAsync("scrollToHead", containerId, reduceMotion);
+    }
+
+    public async Task<bool> GetReducedMotionAsync()
+    {
+        var module = await GetModuleAsync();
+        return await module.InvokeAsync<bool>("getReducedMotion");
     }
 
     private async ValueTask<IJSObjectReference> GetModuleAsync()

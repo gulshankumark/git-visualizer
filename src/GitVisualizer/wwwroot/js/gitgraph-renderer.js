@@ -2223,17 +2223,22 @@ async function renderGraph(containerId, payload) {
     });
   }
 }
-function scrollToHead(containerId) {
+function getReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+function scrollToHead(containerId, reduceMotion = false) {
   const container = document.getElementById(containerId);
   if (!container) return;
   const head = container.querySelector(".commit-highlight");
+  const behavior = reduceMotion ? "instant" : "smooth";
   if (head) {
-    head.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "end" });
+    head.scrollIntoView({ behavior, block: "nearest", inline: "end" });
   } else {
     container.scrollLeft = container.scrollWidth;
   }
 }
 export {
+  getReducedMotion,
   initRenderer,
   renderGraph,
   scrollToHead

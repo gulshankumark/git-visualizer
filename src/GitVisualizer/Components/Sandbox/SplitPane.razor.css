@@ -17,3 +17,39 @@
 .split-handle:hover {
     background: var(--mud-palette-divider);
 }
+
+/* ─── Tablet layout: 768–1023px — stack panels vertically ─── */
+@media (max-width: 1023px) and (min-width: 768px) {
+    .split-pane {
+        flex-direction: column;
+    }
+
+    /* Left panel (has inline width style) → top panel */
+    .split-pane > div:first-child {
+        width:       100% !important;
+        min-width:   0 !important;
+        height:      50vh;
+        overflow-y:  auto;
+    }
+
+    /* Right panel (has inline flex:1) → bottom panel */
+    .split-pane > div:last-of-type {
+        min-width:   0 !important;
+        height:      calc(50vh - var(--gitvis-split-handle-width, 8px));
+        overflow-y:  auto;
+    }
+
+    /* Vertical drag handle → horizontal resize bar */
+    .split-handle {
+        width:  100% !important;
+        height: var(--gitvis-split-handle-width, 8px);
+        cursor: row-resize;
+    }
+}
+
+/* ─── Mobile layout: <768px — hide split handle (tabs used instead) ─── */
+@media (max-width: 767px) {
+    .split-handle {
+        display: none;
+    }
+}

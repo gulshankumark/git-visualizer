@@ -1,1 +1,24 @@
 /* Components/Layout/MainLayout.razor.css */
+
+/* Desktop toolbar buttons — visible by default */
+.toolbar-desktop-only {
+    display:     flex;
+    align-items: center;
+    gap:         4px;
+}
+
+/* Mobile hamburger — hidden by default; shown on < 768px */
+.toolbar-mobile-only {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .toolbar-desktop-only {
+        display: none;
+    }
+
+    .toolbar-mobile-only {
+        display: flex;
+        align-items: center;
+    }
+}

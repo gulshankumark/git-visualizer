@@ -36,4 +36,7 @@ builder.Services.AddSingleton<IStorageMonitorService, StorageMonitorService>();
 // Story 4.1 — Service Worker Update Detection
 builder.Services.AddSingleton<IServiceWorkerUpdateService, ServiceWorkerUpdateService>();
 
+// Story 5.3 — Viewport breakpoint detection
+builder.Services.AddSingleton<ViewportJsInterop>();
+
 await builder.Build().RunAsync();

@@ -10,28 +10,46 @@
         <MudText Typo="Typo.h6" Style="margin-right: auto; font-family: var(--gitvis-font-mono);">
             git-visualizer
         </MudText>
-        <MudTooltip Text="Reset sandbox (Ctrl+Shift+R)">
-            <MudIconButton Icon="@Icons.Material.Outlined.RestartAlt"
-                           OnClick="@(() => _isResetDialogOpen = true)"
-                           aria-label="Reset sandbox" />
-        </MudTooltip>
-        <MudTooltip Text="Replay mode (Ctrl+Shift+P)">
-            <MudIconButton Icon="@Icons.Material.Outlined.PlayCircleOutline"
-                           Disabled="true"
-                           aria-label="Replay mode" />
-        </MudTooltip>
-        <MudTooltip Text="@(ThemeService.IsDarkMode ? "Switch to light theme" : "Switch to dark theme")">
-            <MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
-                           OnClick="@ThemeService.ToggleAsync"
-                           aria-label="@(ThemeService.IsDarkMode ? "Switch to light theme" : "Switch to dark theme")" />
-        </MudTooltip>
-        <MudTooltip Text="View source on GitHub">
-            <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
-                           Href="https://github.com/gulshankumark/git-visualizer"
-                           Target="_blank"
-                           rel="noopener noreferrer"
-                           aria-label="View source on GitHub" />
-        </MudTooltip>
+        <!-- Desktop toolbar: Reset, Replay, Theme, GitHub -->
+        <div class="toolbar-desktop-only">
+            <MudTooltip Text="Reset sandbox (Ctrl+Shift+R)">
+                <MudIconButton Icon="@Icons.Material.Outlined.RestartAlt"
+                               OnClick="@(() => _isResetDialogOpen = true)"
+                               aria-label="Reset sandbox" />
+            </MudTooltip>
+            <MudTooltip Text="Replay mode (Ctrl+Shift+P)">
+                <MudIconButton Icon="@Icons.Material.Outlined.PlayCircleOutline"
+                               Disabled="true"
+                               aria-label="Replay mode" />
+            </MudTooltip>
+            <MudTooltip Text="@(ThemeService.IsDarkMode ? "Switch to light theme" : "Switch to dark theme")">
+                <MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
+                               OnClick="@ThemeService.ToggleAsync"
+                               aria-label="@(ThemeService.IsDarkMode ? "Switch to light theme" : "Switch to dark theme")" />
+            </MudTooltip>
+            <MudTooltip Text="View source on GitHub">
+                <MudIconButton Icon="@Icons.Custom.Brands.GitHub"
+                               Href="https://github.com/gulshankumark/git-visualizer"
+                               Target="_blank"
+                               rel="noopener noreferrer"
+                               aria-label="View source on GitHub" />
+            </MudTooltip>
+        </div>
+
+        <!-- Mobile hamburger menu (< 768px only) -->
+        <div class="toolbar-mobile-only">
+            <MudMenu Icon="@Icons.Material.Filled.Menu" aria-label="Open menu">
+                <MudMenuItem OnClick="@(() => _isResetDialogOpen = true)">Reset sandbox</MudMenuItem>
+                <MudMenuItem Disabled="true">Replay mode</MudMenuItem>
+                <MudMenuItem OnClick="@ThemeService.ToggleAsync">
+                    @(ThemeService.IsDarkMode ? "Switch to light theme" : "Switch to dark theme")
+                </MudMenuItem>
+                <MudMenuItem Href="https://github.com/gulshankumark/git-visualizer"
+                             Target="_blank">
+                    View source on GitHub
+                </MudMenuItem>
+            </MudMenu>
+        </div>
     </MudAppBar>
     <MudMainContent Style="height:calc(100vh - 48px); overflow:hidden;">
         @Body

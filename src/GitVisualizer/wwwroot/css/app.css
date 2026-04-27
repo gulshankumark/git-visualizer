@@ -78,9 +78,9 @@ html, body {
 /* ─── Suppress all motion when user prefers reduced motion (FR25) ─── */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
-        animation-duration:        0.01ms !important;
+        animation-duration:        0s !important;
         animation-iteration-count: 1 !important;
-        transition-duration:       0.01ms !important;
+        transition-duration:       0s !important;
     }
 }
 

@@ -1,0 +1,33 @@
+/* src/GitVisualizer/Components/Mobile/MobileTabBar.razor.css */
+
+.mobile-tab-bar {
+    display:      flex;
+    height:       56px;
+    flex-shrink:  0;
+    border-top:   1px solid var(--mud-palette-divider);
+    background:   var(--mud-palette-surface);
+}
+
+.mobile-tab-bar button {
+    flex:            1;
+    border:          none;
+    background:      transparent;
+    cursor:          pointer;
+    font-size:       max(14px, 1rem);
+    color:           var(--mud-palette-text-secondary);
+    min-height:      44px; /* WCAG touch-target minimum */
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+}
+
+.mobile-tab-bar button.active {
+    border-bottom: 3px solid var(--mud-palette-primary);
+    color:         var(--mud-palette-primary);
+    font-weight:   600;
+}
+
+.mobile-tab-bar button:focus-visible {
+    outline:        2px solid var(--gitvis-focus-color, #2DA44E);
+    outline-offset: -2px;
+}

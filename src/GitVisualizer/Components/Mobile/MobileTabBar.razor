@@ -1,0 +1,22 @@
+@* src/GitVisualizer/Components/Mobile/MobileTabBar.razor *@
+<div class="mobile-tab-bar" role="tablist" aria-label="Panel selector">
+    <button role="tab"
+            aria-selected="@(ActiveTab == "Terminal" ? "true" : "false")"
+            aria-controls="terminal-panel"
+            class="@(ActiveTab == "Terminal" ? "active" : "")"
+            @onclick="@(() => OnTabChange.InvokeAsync("Terminal"))">
+        Terminal
+    </button>
+    <button role="tab"
+            aria-selected="@(ActiveTab == "Graph" ? "true" : "false")"
+            aria-controls="graph-panel"
+            class="@(ActiveTab == "Graph" ? "active" : "")"
+            @onclick="@(() => OnTabChange.InvokeAsync("Graph"))">
+        Graph
+    </button>
+</div>
+
+@code {
+    [Parameter] public string ActiveTab { get; set; } = "Terminal";
+    [Parameter] public EventCallback<string> OnTabChange { get; set; }
+}
