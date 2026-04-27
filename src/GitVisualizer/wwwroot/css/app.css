@@ -59,6 +59,22 @@ html, body {
     --gitvis-graph-branch-5:      #0550AE;
 }
 
+/* ─── Keyboard focus outline — WCAG 2.1 AAA (AC2 Story 5.1) ─── */
+/* :focus-visible fires only for keyboard focus, not mouse clicks */
+:focus-visible {
+    outline:        2px solid #3FB950;
+    outline-offset: 2px;
+}
+
+:root[data-theme="light"] :focus-visible {
+    outline-color: #2DA44E;
+}
+
+/* Never hide focus outlines */
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
 /* ─── Suppress all motion when user prefers reduced motion (FR25) ─── */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

@@ -2,7 +2,13 @@
     <div style="width:@(_terminalWidthPx)px; min-width:320px; flex-shrink:0; overflow:hidden;">
         @LeftContent
     </div>
-    <div class="split-handle" @onmousedown="HandleDragStart"></div>
+    <div class="split-handle"
+         tabindex="0"
+         role="separator"
+         aria-label="Resize panels"
+         aria-orientation="vertical"
+         @onmousedown="HandleDragStart"
+         @onkeydown="HandleHandleKeyDown"></div>
     <div style="flex:1; min-width:400px; overflow:hidden;">
         @RightContent
     </div>
@@ -93,5 +99,23 @@
         _isDragging = false;
         LocalStorage.SetItem(StorageKey, _terminalWidthPx);
         return Task.CompletedTask;
+    }
+
+    private void HandleHandleKeyDown(KeyboardEventArgs e)
+    {
+        const double step = 20.0;
+        if (_containerWidth <= 0) return;
+
+        var newWidth = e.Key switch
+        {
+            "ArrowLeft"  => _terminalWidthPx - step,
+            "ArrowRight" => _terminalWidthPx + step,
+            _            => _terminalWidthPx
+        };
+
+        if (newWidth == _terminalWidthPx) return;
+
+        _terminalWidthPx = Math.Clamp(newWidth, MinTerminalPx, _containerWidth - MinGraphPx);
+        LocalStorage.SetItem(StorageKey, _terminalWidthPx);
     }
 }
