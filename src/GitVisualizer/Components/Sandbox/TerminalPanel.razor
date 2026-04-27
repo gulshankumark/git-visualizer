@@ -44,7 +44,8 @@
                 }
                 else
                 {
-                    <MudAlert Class="terminal-alert" Severity="Severity.Warning" Dense="true" role="alert">
+                    @* Visual error display — no role="alert" here to avoid nested live-region conflict with role="log" *@
+                    <MudAlert Class="terminal-alert" Severity="Severity.Warning" Dense="true">
                         @entry.Result.ErrorMessage
                         @if (!string.IsNullOrEmpty(entry.Result.SuggestedFix))
                         {
@@ -55,6 +56,25 @@
             </div>
         }
     </div>
+
+    @{
+        var _lastFailedEntry = GitService.CommandHistory.LastOrDefault(e => !e.Result.Success);
+    }
+    @if (_lastFailedEntry != null)
+    {
+        @* Assertive announcement zone — outside role="log" so there is no nested live-region conflict.
+           Screen readers announce errors immediately via role="alert" (aria-live="assertive"). *@
+        <div role="alert"
+             aria-live="assertive"
+             aria-atomic="true"
+             style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
+            Error: @_lastFailedEntry.Result.ErrorMessage
+            @if (!string.IsNullOrEmpty(_lastFailedEntry.Result.SuggestedFix))
+            {
+                @($" {_lastFailedEntry.Result.SuggestedFix}")
+            }
+        </div>
+    }
 
     <div class="terminal-input-row">
         <span class="terminal-prompt">$</span>

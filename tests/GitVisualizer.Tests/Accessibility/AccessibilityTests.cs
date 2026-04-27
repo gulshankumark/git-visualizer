@@ -1,5 +1,6 @@
 // tests/GitVisualizer.Tests/Accessibility/AccessibilityTests.cs
 using Bunit;
+using GitVisualizer.Components.Layout;
 using GitVisualizer.Components.Sandbox;
 using GitVisualizer.Interop;
 using GitVisualizer.Models;
@@ -7,7 +8,6 @@ using GitVisualizer.Services;
 using GitVisualizer.Tests.Fakes;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
-using System.IO;
 
 namespace GitVisualizer.Tests.Accessibility;
 
@@ -39,15 +39,6 @@ public class AccessibilityTests : BunitContext
         try { base.Dispose(disposing); }
         catch (InvalidOperationException) { }
         catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is InvalidOperationException)) { }
-    }
-
-    private static string GetRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "git-visualizer.sln")))
-            dir = dir.Parent;
-        if (dir == null) throw new InvalidOperationException("Could not find repository root");
-        return dir.FullName;
     }
 
     // ── AC1: Terminal live region ─────────────────────────────────────────────
@@ -152,16 +143,45 @@ public class AccessibilityTests : BunitContext
         Assert.Contains("0 commits", label);
     }
 
-    // ── AC3: Toolbar button aria-labels (source-file check) ──────────────────
+    // ── AC3: Toolbar button aria-labels (bUnit rendering) ──────────────────────
 
     [Fact]
     public void MainLayout_ToolbarButtons_AllHaveAriaLabels()
     {
-        var path = Path.Combine(GetRepoRoot(), "src/GitVisualizer/Components/Layout/MainLayout.razor");
-        var src = File.ReadAllText(path);
+        Services.AddSingleton<IServiceWorkerUpdateService>(new FakeServiceWorkerUpdateService());
 
-        var matches = System.Text.RegularExpressions.Regex.Matches(src, @"aria-label=""[^""]+""|aria-label='[^']+'");
-        Assert.True(matches.Count >= 4,
-            $"Expected ≥4 aria-label attributes on toolbar buttons in MainLayout.razor, found {matches.Count}");
+        Render<MudBlazor.MudPopoverProvider>();
+        var cut = Render<MainLayout>();
+
+        var buttonsWithAriaLabel = cut.FindAll("button[aria-label], a[aria-label]");
+        Assert.True(buttonsWithAriaLabel.Count >= 4,
+            $"Expected ≥4 labeled toolbar controls in MainLayout, found {buttonsWithAriaLabel.Count}");
+        Assert.All(buttonsWithAriaLabel,
+            btn => Assert.False(string.IsNullOrWhiteSpace(btn.GetAttribute("aria-label")),
+                "aria-label must not be empty or whitespace"));
+    }
+
+    // ── AC5: aria-label updates on state change ─────────────────────────────────
+
+    [Fact]
+    public async Task CommitGraphPanel_AriaLabel_UpdatesOnStateChange()
+    {
+        _git.CurrentState = null;
+        _fakeRenderService.AriaLabelToReturn = "Git graph: no repository initialised";
+
+        var cut = Render<CommitGraphPanel>();
+
+        cut.WaitForAssertion(() =>
+            Assert.StartsWith("Git graph:", cut.Find(".commit-graph-panel").GetAttribute("aria-label") ?? ""));
+
+        _git.CurrentState = new RepoState(true, "main", [], []);
+        _fakeRenderService.AriaLabelToReturn = "Git graph: HEAD on main, 3 commits";
+        _git.RaiseStateChanged();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("3 commits", cut.Find(".commit-graph-panel").GetAttribute("aria-label") ?? ""),
+            timeout: TimeSpan.FromSeconds(2));
+
+        await Task.CompletedTask;
     }
 }

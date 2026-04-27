@@ -52,7 +52,7 @@ public sealed class GraphRenderService : IGraphRenderService
 
         var graph = state.Graph;
         if (graph is null || graph.Commits.Count == 0)
-            return $"Git graph: HEAD on {state.CurrentBranch ?? "main"}, 0 commits";
+            return $"Git graph: HEAD on {state.CurrentBranch ?? graph?.HeadBranch ?? "main"}, 0 commits";
 
         var commitCount = graph.Commits.Count;
         return $"Git graph: HEAD on {state.CurrentBranch ?? graph.HeadBranch}, {commitCount} {(commitCount == 1 ? "commit" : "commits")}";
