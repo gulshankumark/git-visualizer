@@ -25,15 +25,7 @@
                   Dense="true"
                   OnClose="() => StateHasChanged()">
             <div>
-                Storage usage is high (@($"{_storageStatus.UsagePercent:F1}%")).
-                @if (_storageStatus.IsBlocked)
-                {
-                    <span>Commands are blocked. <MudLink Href="#reset">Reset your data</MudLink> to continue.</span>
-                }
-                else
-                {
-                    <span>Please save your work.</span>
-                }
+                ⚠️ Storage at @($"{_storageStatus.UsagePercent:F0}%") — consider resetting the sandbox to free space
             </div>
         </MudAlert>
     }
@@ -76,6 +68,8 @@
                   placeholder="@(_storageStatus?.IsBlocked == true ? "Storage full — reset to continue" : "Enter git command...")"></textarea>
     </div>
 
+    <StorageFullDialog @bind-IsOpen="_showStorageFullDialog" OnReset="HandleStorageFullResetAsync" />
+
 </div>
 
 @code {
@@ -87,6 +81,7 @@
     private string _savedInput = string.Empty;
     private int _historyIndex = -1;
     private StorageStatus? _storageStatus;
+    private bool _showStorageFullDialog;
 
     protected override async Task OnInitializedAsync()
     {
@@ -144,10 +139,10 @@
         var command = _inputText.Trim();
         if (string.IsNullOrEmpty(command)) return;
 
-        // Check storage block threshold
+        // Check storage block threshold and show dialog
         if (_storageStatus?.IsBlocked == true)
         {
-            // Storage is blocked — don't allow command execution
+            _showStorageFullDialog = true;
             return;
         }
 
@@ -186,6 +181,21 @@
         }
         try { await _inputRef.FocusAsync(); }
         catch (JSException) { }
+    }
+
+    private async Task HandleStorageFullResetAsync()
+    {
+        try
+        {
+            await GitService.ResetAsync();
+            _storageStatus = await StorageService.GetStatusAsync();
+            try { await _inputRef.FocusAsync(); }
+            catch (JSException) { }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TerminalPanel] Error during storage full reset: {ex.Message}");
+        }
     }
 
     private void NavigateHistoryUp()

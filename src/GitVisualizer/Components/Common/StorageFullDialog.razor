@@ -1,0 +1,67 @@
+@* src/GitVisualizer/Components/Common/StorageFullDialog.razor *@
+<MudDialog Visible="@IsOpen"
+           VisibleChanged="@OnVisibleChanged"
+           Options="@DialogOptions"
+           aria-label="Storage full dialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Storage Full</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>IndexedDB is full (50MB). Please reset the sandbox to continue.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Error"
+                   OnClick="HandleReset"
+                   Disabled="@_isResetting">
+            @if (_isResetting)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Resetting...</MudText>
+            }
+            else
+            {
+                <MudText>Reset Now</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnReset { get; set; }
+    
+    private bool _isResetting;
+
+    private DialogOptions DialogOptions = new()
+    {
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small,
+        CloseButton = false
+    };
+
+    private async Task HandleReset()
+    {
+        _isResetting = true;
+        StateHasChanged();
+        try
+        {
+            await OnReset.InvokeAsync();
+        }
+        finally
+        {
+            _isResetting = false;
+            StateHasChanged();
+            IsOpen = false;
+            await IsOpenChanged.InvokeAsync(IsOpen);
+        }
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (IsOpen == visible) return;
+        IsOpen = visible;
+        await IsOpenChanged.InvokeAsync(visible);
+    }
+}
