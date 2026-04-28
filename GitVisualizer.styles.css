@@ -1,5 +1,62 @@
 /* /Components/Layout/MainLayout.razor.rz.scp.css */
 /* Components/Layout/MainLayout.razor.css */
+
+/* Desktop toolbar buttons — visible by default */
+.toolbar-desktop-only[b-328sbt7lx6] {
+    display:     flex;
+    align-items: center;
+    gap:         4px;
+}
+
+/* Mobile hamburger — hidden by default; shown on < 768px */
+.toolbar-mobile-only[b-328sbt7lx6] {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .toolbar-desktop-only[b-328sbt7lx6] {
+        display: none;
+    }
+
+    .toolbar-mobile-only[b-328sbt7lx6] {
+        display: flex;
+        align-items: center;
+    }
+}
+/* /Components/Mobile/MobileTabBar.razor.rz.scp.css */
+/* src/GitVisualizer/Components/Mobile/MobileTabBar.razor.css */
+
+.mobile-tab-bar[b-wegbgaeqmp] {
+    display:      flex;
+    height:       56px;
+    flex-shrink:  0;
+    border-top:   1px solid var(--mud-palette-divider);
+    background:   var(--mud-palette-surface);
+}
+
+.mobile-tab-bar button[b-wegbgaeqmp] {
+    flex:            1;
+    border:          none;
+    background:      transparent;
+    cursor:          pointer;
+    font-size:       max(14px, 1rem);
+    color:           var(--mud-palette-text-secondary);
+    min-height:      44px; /* WCAG touch-target minimum */
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+}
+
+.mobile-tab-bar button.active[b-wegbgaeqmp] {
+    border-bottom: 3px solid var(--mud-palette-primary);
+    color:         var(--mud-palette-primary);
+    font-weight:   600;
+}
+
+.mobile-tab-bar button:focus-visible[b-wegbgaeqmp] {
+    outline:        2px solid var(--gitvis-focus-color, #2DA44E);
+    outline-offset: -2px;
+}
 /* /Components/Sandbox/CommitGraphPanel.razor.rz.scp.css */
 .commit-graph-panel[b-xp96ioxpwu] {
     height:          100%;
@@ -28,8 +85,8 @@
     text-align:    center;
 }
 
-/* ─── Mermaid graph container layout ─── */
-.mermaid-container[b-xp96ioxpwu] {
+/* ─── Git graph container layout ─── */
+.git-graph-container[b-xp96ioxpwu] {
     width:    100%;
     height:   100%;
     overflow: auto;
@@ -38,9 +95,9 @@
 
 /* ─── HEAD commit glow (suppressed by app.css reduced-motion rule) ─── */
 @keyframes gitvis-commit-glow-b-xp96ioxpwu {
-    0%   { filter: drop-shadow(0 0 4px var(--gitvis-mermaid-branch-0)); }
-    50%  { filter: drop-shadow(0 0 8px var(--gitvis-mermaid-branch-0)); }
-    100% { filter: drop-shadow(0 0 4px var(--gitvis-mermaid-branch-0)); }
+    0%   { filter: drop-shadow(0 0 4px var(--gitvis-graph-branch-0)); }
+    50%  { filter: drop-shadow(0 0 8px var(--gitvis-graph-branch-0)); }
+    100% { filter: drop-shadow(0 0 4px var(--gitvis-graph-branch-0)); }
 }
 
 .commit-highlight[b-xp96ioxpwu] {
@@ -88,6 +145,27 @@
         transition: none;
     }
 }
+/* /Components/Sandbox/SandboxPage.razor.rz.scp.css */
+/* src/GitVisualizer/Components/Sandbox/SandboxPage.razor.css */
+
+/* ─── Mobile layout (< 768px): flex column, tab bar at bottom ─── */
+.mobile-layout[b-6xcbm42bkq] {
+    display:        flex;
+    flex-direction: column;
+    height:         100%;
+    overflow:       hidden;
+}
+
+.mobile-panel-content[b-6xcbm42bkq] {
+    flex:       1;
+    overflow:   hidden;
+    min-height: 0; /* needed for flex child overflow */
+}
+
+.mobile-panel-content > div[b-6xcbm42bkq] {
+    height:     100%;
+    overflow-y: auto;
+}
 /* /Components/Sandbox/SplitPane.razor.rz.scp.css */
 .split-pane[b-d1agguc94w] {
     display:        flex;
@@ -107,6 +185,42 @@
 
 .split-handle:hover[b-d1agguc94w] {
     background: var(--mud-palette-divider);
+}
+
+/* ─── Tablet layout: 768–1023px — stack panels vertically ─── */
+@media (max-width: 1023px) and (min-width: 768px) {
+    .split-pane[b-d1agguc94w] {
+        flex-direction: column;
+    }
+
+    /* Left panel (has inline width style) → top panel */
+    .split-pane > div:first-child[b-d1agguc94w] {
+        width:       100% !important;
+        min-width:   0 !important;
+        height:      50vh;
+        overflow-y:  auto;
+    }
+
+    /* Right panel (has inline flex:1) → bottom panel */
+    .split-pane > div:last-of-type[b-d1agguc94w] {
+        min-width:   0 !important;
+        height:      calc(50vh - var(--gitvis-split-handle-width, 8px));
+        overflow-y:  auto;
+    }
+
+    /* Vertical drag handle → horizontal resize bar */
+    .split-handle[b-d1agguc94w] {
+        width:  100% !important;
+        height: var(--gitvis-split-handle-width, 8px);
+        cursor: row-resize;
+    }
+}
+
+/* ─── Mobile layout: <768px — hide split handle (tabs used instead) ─── */
+@media (max-width: 767px) {
+    .split-handle[b-d1agguc94w] {
+        display: none;
+    }
 }
 /* /Components/Sandbox/TerminalPanel.razor.rz.scp.css */
 .terminal-panel[b-h2297yg30m] {

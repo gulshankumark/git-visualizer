@@ -64,8 +64,22 @@ export async function gitBranch(name) {
 
 export async function gitCheckout(ref, createBranch = false) {
   try {
-    if (createBranch) await git.branch({ fs, dir, ref });
-    await git.checkout({ fs, dir, ref });
+    if (createBranch) {
+      await git.branch({ fs, dir, ref });
+      await git.checkout({ fs, dir, ref });
+    } else {
+      // Try to checkout as a local branch first, then try with remote
+      try {
+        await git.checkout({ fs, dir, ref, force: true });
+      } catch (e) {
+        // If local branch checkout fails, try with 'refs/heads/' prefix
+        if (e.message && e.message.includes('Could not find')) {
+          await git.checkout({ fs, dir, ref: `refs/heads/${ref}`, force: true });
+        } else {
+          throw e;
+        }
+      }
+    }
     return { success: true, message: `Switched to branch '${ref}'` };
   } catch (e) {
     throw new Error(`git checkout failed: ${e.message}`);
@@ -105,10 +119,18 @@ export async function gitGetGraph() {
     const branches = await git.listBranches({ fs, dir });
     const headBranch = (await git.currentBranch({ fs, dir })) ?? 'main';
 
+    // Walk the trunk first so shared ancestors get attributed to main/master
+    // rather than to whichever branch listBranches happens to return first.
+    const trunkPriority = (b) => b === 'main' ? 0 : b === 'master' ? 1 : b === headBranch ? 2 : 3;
+    const orderedBranches = [...branches].sort((a, b) => {
+      const pa = trunkPriority(a), pb = trunkPriority(b);
+      return pa !== pb ? pa - pb : a.localeCompare(b);
+    });
+
     const seen = new Map();
     const branchTips = {};
 
-    for (const branch of branches) {
+    for (const branch of orderedBranches) {
       let log;
       try {
         log = await git.log({ fs, dir, ref: branch, depth: 50 });
@@ -136,5 +158,29 @@ export async function gitGetGraph() {
     return { success: true, branches, headBranch, commits, branchTips };
   } catch (e) {
     return { success: false, error: e.message, branches: [], headBranch: 'main', commits: [], branchTips: {} };
+  }
+}
+
+export async function gitReset() {
+  try {
+    _repoInitialized = false;
+
+    // LightningFS keeps an in-memory cache and an IndexedDB-backed store.
+    // Re-init the in-memory layer with wipe:true to clear the cache, then
+    // delete the underlying IndexedDB database so nothing survives a reload.
+    const fresh = new LightningFS('gitfs', { wipe: true });
+    Object.assign(fs, fresh);
+
+    await new Promise((resolve) => {
+      const req = indexedDB.deleteDatabase('gitfs');
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();   // best-effort: don't block reset on IDB errors
+      req.onblocked = () => resolve(); // another tab holds it open; proceed anyway
+    });
+
+    return { success: true, message: 'Repository reset' };
+  } catch (e) {
+    console.error('git reset failed:', e);
+    return { success: false, message: `Reset failed: ${e.message}` };
   }
 }
