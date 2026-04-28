@@ -8,10 +8,6 @@
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
 
-  <!-- Set base href to /git-visualizer/ only at publish (GitHub Pages deployment) -->
-  <PropertyGroup Condition="'$(PublishingThisProject)' == 'true'">
-    <BlazorWasmBaseHref>/git-visualizer/</BlazorWasmBaseHref>
-  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Blazor.LocalStorage.WebAssembly" Version="9.0.1" />
