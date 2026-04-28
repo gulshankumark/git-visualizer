@@ -14,7 +14,7 @@ public class InstallPromptTests
     {
         // When running from dotnet test, need to navigate from the bin directory to the solution root
         var binDir = Path.GetDirectoryName(typeof(InstallPromptTests).Assembly.Location);
-        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..", "..");  // Navigate up 6 levels
+        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..");  // Navigate up 5 levels: net10.0 → Release → bin → TestProject → tests → solution root
 
         var possibleRoots = new[]
         {
@@ -36,7 +36,7 @@ public class InstallPromptTests
     {
         // When running from dotnet test, need to navigate from the bin directory to the solution root
         var binDir = Path.GetDirectoryName(typeof(InstallPromptTests).Assembly.Location);
-        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..", "..");  // Navigate up 6 levels
+        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..");  // Navigate up 5 levels: net10.0 → Release → bin → TestProject → tests → solution root
 
         var possibleRoots = new[]
         {
@@ -58,7 +58,7 @@ public class InstallPromptTests
     {
         // When running from dotnet test, need to navigate from the bin directory to the solution root
         var binDir = Path.GetDirectoryName(typeof(InstallPromptTests).Assembly.Location);
-        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..", "..");  // Navigate up 6 levels
+        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..");  // Navigate up 5 levels: net10.0 → Release → bin → TestProject → tests → solution root
 
         var possibleRoots = new[]
         {
@@ -80,7 +80,7 @@ public class InstallPromptTests
     {
         // When running from dotnet test, need to navigate from the bin directory to the solution root
         var binDir = Path.GetDirectoryName(typeof(InstallPromptTests).Assembly.Location);
-        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..", "..");  // Navigate up 6 levels
+        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..");  // Navigate up 5 levels: net10.0 → Release → bin → TestProject → tests → solution root
 
         var possibleRoots = new[]
         {
@@ -102,7 +102,7 @@ public class InstallPromptTests
     {
         // When running from dotnet test, need to navigate from the bin directory to the solution root
         var binDir = Path.GetDirectoryName(typeof(InstallPromptTests).Assembly.Location);
-        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..", "..");  // Navigate up 6 levels
+        var solutionRoot = Path.Combine(binDir ?? "", "..", "..", "..", "..", "..");  // Navigate up 5 levels: net10.0 → Release → bin → TestProject → tests → solution root
 
         var possibleRoots = new[]
         {
