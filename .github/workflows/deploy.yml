@@ -34,7 +34,7 @@ jobs:
         run: dotnet test git-visualizer.sln --no-build --configuration Release
 
       - name: Publish
-        run: dotnet publish src/GitVisualizer -c Release -o publish/ --no-build
+        run: dotnet publish src/GitVisualizer -c Release -o publish/
 
       - name: Fix base href for GitHub Pages sub-path
         run: sed -i 's|<base href="/" />|<base href="/git-visualizer/" />|' publish/wwwroot/index.html
