@@ -42,6 +42,9 @@ jobs:
       - name: Copy index.html to 404.html for SPA routing
         run: cp publish/wwwroot/index.html publish/wwwroot/404.html
 
+      - name: Disable Jekyll (allow _framework/ to be served)
+        run: touch publish/wwwroot/.nojekyll
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
