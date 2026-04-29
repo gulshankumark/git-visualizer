@@ -1,4 +1,4 @@
-/* Manifest version: 3lzZJPzg */
+/* Manifest version: q5cu/glw */
 // Service Worker for git-visualizer PWA
 // Provides offline support with cache-first strategy for pre-cached assets
 // and offline fallback for uncached requests.
